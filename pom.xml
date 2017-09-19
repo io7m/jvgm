@@ -14,7 +14,7 @@
 
   <groupId>com.io7m.jvgm</groupId>
   <artifactId>com.io7m.jvgm</artifactId>
-  <version>0.1.0</version>
+  <version>0.0.1</version>
   <packaging>pom</packaging>
 
   <name>com.io7m.jvgm</name>
