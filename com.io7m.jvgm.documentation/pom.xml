@@ -33,7 +33,22 @@
     <dependency>
       <groupId>${project.groupId}</groupId>
       <artifactId>com.io7m.jvgm.core</artifactId>
-      <version>0.0.1</version>
+      <version>${project.version}</version>
+    </dependency>
+    <dependency>
+      <groupId>${project.groupId}</groupId>
+      <artifactId>com.io7m.jvgm.interpreter.ym2612</artifactId>
+      <version>${project.version}</version>
+    </dependency>
+    <dependency>
+      <groupId>${project.groupId}</groupId>
+      <artifactId>com.io7m.jvgm.parser.vanilla</artifactId>
+      <version>${project.version}</version>
+    </dependency>
+    <dependency>
+      <groupId>${project.groupId}</groupId>
+      <artifactId>com.io7m.jvgm.parser.api</artifactId>
+      <version>${project.version}</version>
     </dependency>
 
     <dependency>
