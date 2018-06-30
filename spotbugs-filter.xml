@@ -57,6 +57,22 @@
     </Or>
   </Match>
 
+  <!-- More switch-based interpreting -->
+  <Match>
+    <Package name="com.io7m.jvgm.cmdline"/>
+    <Bug pattern="CC_CYCLOMATIC_COMPLEXITY"/>
+  </Match>
+
+  <!-- Do not care about any of these issues -->
+  <Match>
+    <Package name="com.io7m.jvgm.cmdline"/>
+    <Or>
+      <Bug pattern="LO_SUSPECT_LOG_CLASS"/>
+      <Bug pattern="LO_TOSTRING_PARAMETER"/>
+      <Bug pattern="UVA_USE_VAR_ARGS"/>
+    </Or>
+  </Match>
+
   <!-- False positive -->
   <Match>
     <Bug pattern="EXS_EXCEPTION_SOFTENING_NO_CHECKED"/>

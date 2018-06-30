@@ -28,6 +28,7 @@
     <module>com.io7m.jvgm.parser.api</module>
     <module>com.io7m.jvgm.parser.vanilla</module>
     <module>com.io7m.jvgm.interpreter.ym2612</module>
+    <module>com.io7m.jvgm.cmdline</module>
   </modules>
 
   <properties>
@@ -137,6 +138,11 @@
         <artifactId>value</artifactId>
         <version>${io7m.org.immutables.version}</version>
       </dependency>
+      <dependency>
+        <groupId>com.beust</groupId>
+        <artifactId>jcommander</artifactId>
+        <version>1.72</version>
+      </dependency>
 
       <dependency>
         <groupId>org.junit.jupiter</groupId>
@@ -189,6 +195,15 @@
         </plugin>
       </plugins>
     </pluginManagement>
+
+    <plugins>
+      <!-- Generate a site -->
+      <plugin>
+        <groupId>com.io7m.minisite</groupId>
+        <artifactId>com.io7m.minisite.maven_plugin</artifactId>
+        <inherited>false</inherited>
+      </plugin>
+    </plugins>
   </build>
 
 </project>
