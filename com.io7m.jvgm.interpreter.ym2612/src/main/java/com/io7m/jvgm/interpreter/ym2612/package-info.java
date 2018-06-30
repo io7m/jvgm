@@ -18,6 +18,5 @@
  * YM2612 interpreter.
  */
 
-@com.io7m.jnull.NonNullByDefault
 package com.io7m.jvgm.interpreter.ym2612;
 

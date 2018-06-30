@@ -19,11 +19,9 @@
   <description>VGM parser (Test suite)</description>
   <url>http://io7m.github.io/jvgm/</url>
 
-  <scm>
-    <url>${project.parent.scm.url}</url>
-    <connection>${project.parent.scm.connection}</connection>
-    <developerConnection>${project.parent.scm.developerConnection}</developerConnection>
-  </scm>
+  <properties>
+    <mdep.analyze.skip>true</mdep.analyze.skip>
+  </properties>
 
   <dependencies>
     <dependency>
@@ -45,11 +43,6 @@
       <groupId>${project.groupId}</groupId>
       <artifactId>com.io7m.jvgm.interpreter.ym2612</artifactId>
       <version>${project.version}</version>
-    </dependency>
-
-    <dependency>
-      <groupId>com.io7m.jnull</groupId>
-      <artifactId>com.io7m.jnull.core</artifactId>
     </dependency>
 
     <dependency>
@@ -83,19 +76,6 @@
       <plugin>
         <groupId>org.apache.maven.plugins</groupId>
         <artifactId>maven-checkstyle-plugin</artifactId>
-      </plugin>
-
-      <!-- Ignore dependencies that bytecode analysis gets wrong. -->
-      <plugin>
-        <groupId>org.apache.maven.plugins</groupId>
-        <artifactId>maven-dependency-plugin</artifactId>
-        <configuration>
-          <failOnWarning>true</failOnWarning>
-          <ignoredUnusedDeclaredDependencies>
-            <ignoredUnusedDeclaredDependency>ch.qos.logback:logback-classic:*</ignoredUnusedDeclaredDependency>
-            <ignoredUnusedDeclaredDependency>org.junit.jupiter:junit-jupiter-engine:*</ignoredUnusedDeclaredDependency>
-          </ignoredUnusedDeclaredDependencies>
-        </configuration>
       </plugin>
     </plugins>
   </build>

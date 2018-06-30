@@ -16,6 +16,7 @@
 
 package com.io7m.jvgm.core;
 
+import com.io7m.immutables.styles.ImmutablesStyleType;
 import org.immutables.value.Value;
 
 import java.util.OptionalLong;
@@ -24,7 +25,7 @@ import java.util.OptionalLong;
  * A parsed VGM header.
  */
 
-@VGMImmutableStyleType
+@ImmutablesStyleType
 @Value.Immutable
 public interface VGMHeaderType
 {

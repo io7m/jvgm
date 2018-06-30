@@ -16,13 +16,14 @@
 
 package com.io7m.jvgm.core;
 
+import com.io7m.immutables.styles.ImmutablesStyleType;
 import org.immutables.value.Value;
 
 /**
  * Write a value to the given register in port 0.
  */
 
-@VGMImmutableStyleType
+@ImmutablesStyleType
 @Value.Immutable
 public interface VGMCommandYM2612WritePort0Type extends VGMCommandYM2612Type
 {

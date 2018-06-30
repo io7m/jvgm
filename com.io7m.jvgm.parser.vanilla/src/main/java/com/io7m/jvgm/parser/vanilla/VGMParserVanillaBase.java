@@ -16,7 +16,6 @@
 
 package com.io7m.jvgm.parser.vanilla;
 
-import com.io7m.jnull.NullCheck;
 import com.io7m.jvgm.parser.api.VGMParseError;
 import io.vavr.collection.Seq;
 import io.vavr.collection.Vector;
@@ -24,6 +23,7 @@ import io.vavr.control.Validation;
 import org.apache.commons.io.input.CountingInputStream;
 
 import java.nio.file.Path;
+import java.util.Objects;
 import java.util.Optional;
 
 abstract class VGMParserVanillaBase
@@ -36,9 +36,9 @@ abstract class VGMParserVanillaBase
     final CountingInputStream in_count_stream)
   {
     this.path =
-      NullCheck.notNull(in_path, "Path");
+      Objects.requireNonNull(in_path, "Path");
     this.count_stream =
-      NullCheck.notNull(in_count_stream, "Count stream");
+      Objects.requireNonNull(in_count_stream, "Count stream");
   }
 
   protected final <T> Validation<Seq<VGMParseError>, T> errorV(

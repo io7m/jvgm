@@ -16,7 +16,6 @@
 
 package com.io7m.jvgm.parser.vanilla;
 
-import com.io7m.jnull.NullCheck;
 import com.io7m.junreachable.UnreachableCodeException;
 import com.io7m.jvgm.core.VGMCommandDataBlock;
 import com.io7m.jvgm.core.VGMCommandEOF;
@@ -73,13 +72,14 @@ import org.apache.commons.io.input.SwappedDataInputStream;
 
 import java.io.EOFException;
 import java.io.IOException;
-import java.io.InputStream;
 import java.nio.file.Path;
+import java.util.Objects;
+
+import static com.io7m.jvgm.core.VGMCommandType.Type.DATA_BLOCK;
 
 final class VGMParserVanillaBody
   extends VGMParserVanillaBase implements VGMParserBodyType
 {
-  private final InputStream stream;
   private final SwappedDataInputStream data_stream;
   private final VGMHeader header;
   private boolean finished;
@@ -87,21 +87,20 @@ final class VGMParserVanillaBody
   VGMParserVanillaBody(
     final VGMHeader in_header,
     final Path in_path,
-    final InputStream in_stream,
     final CountingInputStream in_count_stream,
     final SwappedDataInputStream in_data_stream)
   {
     super(in_path, in_count_stream);
 
     this.header =
-      NullCheck.notNull(in_header, "Header");
-    this.stream =
-      NullCheck.notNull(in_stream, "Stream");
+      Objects.requireNonNull(in_header, "Header");
     this.data_stream =
-      NullCheck.notNull(in_data_stream, "Data stream");
+      Objects.requireNonNull(in_data_stream, "Data stream");
     this.finished = false;
   }
 
+  // Excessive cyclomatic complexity due to unavoidable switching
+  //CHECKSTYLE:OFF
   @Override
   public Validation<Seq<VGMParseError>, VGMCommandType> parse()
   {
@@ -170,24 +169,23 @@ final class VGMParserVanillaBody
             // Skip 0x66 compatibility byte
             final byte pad = this.readByte();
             if ((int) pad != 0x66) {
+              final String separator = System.lineSeparator();
+              final CountingInputStream stream = this.countingStream();
+              final String tag_text = Integer.toUnsignedString(DATA_BLOCK.tag(), 16);
               return this.errorV(
                 new StringBuilder(128)
                   .append("  Position: ")
-                  .append(this.countingStream().getByteCount())
-                  .append(System.lineSeparator())
+                  .append(stream.getByteCount())
+                  .append(separator)
                   .append("  Received: ")
-                  .append(Integer.toUnsignedString(
-                    VGMCommandType.Type.DATA_BLOCK.tag(),
-                    16))
+                  .append(tag_text)
                   .append(" ")
                   .append(Integer.toUnsignedString(pad, 16))
-                  .append(System.lineSeparator())
+                  .append(separator)
                   .append("  Expected: ")
-                  .append(Integer.toUnsignedString(
-                    VGMCommandType.Type.DATA_BLOCK.tag(),
-                    16))
+                  .append(tag_text)
                   .append(" 0x66")
-                  .append(System.lineSeparator())
+                  .append(separator)
                   .toString());
             }
 
@@ -332,6 +330,7 @@ final class VGMParserVanillaBody
 
     return false;
   }
+  //CHECKSTYLE:ON
 
   private byte readByte()
     throws IOException

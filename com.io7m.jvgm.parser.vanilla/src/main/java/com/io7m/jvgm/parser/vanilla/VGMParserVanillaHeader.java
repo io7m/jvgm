@@ -18,7 +18,6 @@ package com.io7m.jvgm.parser.vanilla;
 
 import com.io7m.jaffirm.core.Invariants;
 import com.io7m.jfunctional.Unit;
-import com.io7m.jnull.NullCheck;
 import com.io7m.jvgm.core.VGMHeader;
 import com.io7m.jvgm.core.VGMVersion;
 import com.io7m.jvgm.parser.api.VGMParseError;
@@ -33,11 +32,11 @@ import org.apache.commons.io.input.SwappedDataInputStream;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
-import javax.xml.bind.DatatypeConverter;
 import java.io.IOException;
 import java.io.InputStream;
 import java.nio.file.Path;
 import java.util.Arrays;
+import java.util.Objects;
 import java.util.stream.Collectors;
 
 final class VGMParserVanillaHeader
@@ -52,7 +51,7 @@ final class VGMParserVanillaHeader
     (byte) 0x6d,
     (byte) 0x20,
   };
-
+  private final static char[] HEX_ARRAY = "0123456789ABCDEF".toCharArray();
   private final Path path;
   private final InputStream stream;
   private final SwappedDataInputStream data_stream;
@@ -66,12 +65,93 @@ final class VGMParserVanillaHeader
   {
     super(in_path, new CountingInputStream(in_stream));
 
-    this.path = NullCheck.notNull(in_path, "Path");
-    this.stream = NullCheck.notNull(in_stream, "Stream");
+    this.path = Objects.requireNonNull(in_path, "Path");
+    this.stream = Objects.requireNonNull(in_stream, "Stream");
     this.data_stream = new SwappedDataInputStream(this.countingStream());
     this.header_done = false;
     this.buffer = new byte[4];
     this.header_builder = VGMHeader.builder();
+  }
+
+  private static String bytesToHex(
+    final byte[] bytes)
+  {
+    final char[] chars = new char[bytes.length * 2];
+    for (int index = 0; index < bytes.length; ++index) {
+      final int v = bytes[index] & 0xFF;
+      chars[index * 2] = HEX_ARRAY[v >>> 4];
+      chars[index * 2 + 1] = HEX_ARRAY[v & 0x0F];
+    }
+    return String.valueOf(chars);
+  }
+
+  private static void parseHeaderDataOffset(
+    final SwappedDataInputStream data_stream,
+    final VGMHeader.Builder header_builder)
+    throws IOException
+  {
+    final long o = Integer.toUnsignedLong(data_stream.readInt());
+    final long offset_data;
+    if (o > 0L) {
+      offset_data = o + 52L;
+    } else {
+      offset_data = 12L;
+    }
+
+    if (LOG.isTraceEnabled()) {
+      LOG.trace(
+        "Data offset: {} ({})",
+        Long.valueOf(o),
+        Long.valueOf(offset_data));
+    }
+
+    header_builder.setDataOffset(offset_data);
+  }
+
+  private static void parseHeaderLoopOffset(
+    final SwappedDataInputStream data_stream,
+    final VGMHeader.Builder header_builder)
+    throws IOException
+  {
+    final long o = Integer.toUnsignedLong(data_stream.readInt());
+    final long offset_loop;
+    if (o > 0L) {
+      offset_loop = o + 28L;
+    } else {
+      offset_loop = o;
+    }
+
+    if (LOG.isTraceEnabled()) {
+      LOG.trace(
+        "Loop offset: {} ({})",
+        Long.valueOf(o),
+        Long.valueOf(offset_loop));
+    }
+
+    header_builder.setLoopOffset(offset_loop);
+  }
+
+  private static void parseHeaderGD3Offset(
+    final SwappedDataInputStream data_stream,
+    final VGMHeader.Builder header_builder)
+    throws IOException
+  {
+    final long o = Integer.toUnsignedLong(data_stream.readInt());
+    final long offset_gd3;
+    if (o > 0L) {
+      offset_gd3 = o + 20L;
+    } else {
+      offset_gd3 = o;
+    }
+
+    if (LOG.isTraceEnabled()) {
+      LOG.trace(
+        "GD3 offset: {} ({})",
+        Long.valueOf(o),
+        Long.valueOf(offset_gd3));
+    }
+
+    header_builder.setOffsetGD3(offset_gd3);
   }
 
   @Override
@@ -93,7 +173,7 @@ final class VGMParserVanillaHeader
     return this.parseHeaderMagicNumber().flatMap(
       ignore0 -> this.parseHeaderEOFOffset().flatMap(
         ignore1 -> this.parseHeaderVersionNumber().flatMap(
-          version -> this.parseHeaderVersioned(version.intValue()))));
+          version -> this.parseHeaderVersioned())));
   }
 
   private Validation<Seq<VGMParseError>, Unit> parseHeaderEOFOffset()
@@ -119,13 +199,17 @@ final class VGMParserVanillaHeader
     return Validation.valid(Unit.unit());
   }
 
-  private Validation<Seq<VGMParseError>, Tuple2<VGMParserBodyType, VGMHeader>> parseHeaderVersioned(
-    final int version)
+  private Validation<Seq<VGMParseError>, Tuple2<VGMParserBodyType, VGMHeader>> parseHeaderVersioned()
   {
-    Invariants.checkInvariantL(
-      this.countingStream().getByteCount(),
-      this.countingStream().getByteCount() == 12L,
-      position -> "Position must be 12");
+    final CountingInputStream counting_stream = this.countingStream();
+
+    {
+      final long count = counting_stream.getByteCount();
+      Invariants.checkInvariantL(
+        count,
+        count == 12L,
+        position -> "Position must be 12");
+    }
 
     try {
       this.header_builder.setChipSN76489Clock(
@@ -133,46 +217,12 @@ final class VGMParserVanillaHeader
       this.header_builder.setChipYM2413Clock(
         Integer.toUnsignedLong(this.data_stream.readInt()));
 
-      {
-        final long o = Integer.toUnsignedLong(this.data_stream.readInt());
-        final long offset_gd3;
-        if (o > 0L) {
-          offset_gd3 = o + 20L;
-        } else {
-          offset_gd3 = o;
-        }
-
-        if (LOG.isTraceEnabled()) {
-          LOG.trace(
-            "GD3 offset: {} ({})",
-            Long.valueOf(o),
-            Long.valueOf(offset_gd3));
-        }
-
-        this.header_builder.setOffsetGD3(offset_gd3);
-      }
+      parseHeaderGD3Offset(this.data_stream, this.header_builder);
 
       this.header_builder.setSampleCount(
         Integer.toUnsignedLong(this.data_stream.readInt()));
 
-      {
-        final long o = Integer.toUnsignedLong(this.data_stream.readInt());
-        final long offset_loop;
-        if (o > 0L) {
-          offset_loop = o + 28L;
-        } else {
-          offset_loop = o;
-        }
-
-        if (LOG.isTraceEnabled()) {
-          LOG.trace(
-            "Loop offset: {} ({})",
-            Long.valueOf(o),
-            Long.valueOf(offset_loop));
-        }
-
-        this.header_builder.setLoopOffset(offset_loop);
-      }
+      parseHeaderLoopOffset(this.data_stream, this.header_builder);
 
       this.header_builder.setLoopSampleCount(
         Integer.toUnsignedLong(this.data_stream.readInt()));
@@ -191,49 +241,36 @@ final class VGMParserVanillaHeader
       this.header_builder.setChipYM2151Clock(
         Integer.toUnsignedLong(this.data_stream.readInt()));
 
-      {
-        final long o = Integer.toUnsignedLong(this.data_stream.readInt());
-        final long offset_data;
-        if (o > 0L) {
-          offset_data = o + 52L;
-        } else {
-          offset_data = 12L;
-        }
-
-        if (LOG.isTraceEnabled()) {
-          LOG.trace(
-            "Data offset: {} ({})",
-            Long.valueOf(o),
-            Long.valueOf(offset_data));
-        }
-
-        this.header_builder.setDataOffset(offset_data);
-      }
+      parseHeaderDataOffset(this.data_stream, this.header_builder);
 
       this.header_builder.setChipSegaPCMClock(
         Integer.toUnsignedLong(this.data_stream.readInt()));
       this.header_builder.setChipSegaPCMInterfaceRegister(
         Integer.toUnsignedLong(this.data_stream.readInt()));
 
-      Invariants.checkInvariantL(
-        this.countingStream().getByteCount(),
-        this.countingStream().getByteCount() == 64L,
-        position -> "Position must be 64");
+      {
+        final long count = counting_stream.getByteCount();
+        Invariants.checkInvariantL(
+          count,
+          count == 64L,
+          position -> "Position must be 64");
+      }
 
     } catch (final IOException e) {
       return this.errorExceptionV(e);
     }
 
-    final VGMHeader header =
-      this.header_builder.build();
+    final VGMHeader header = this.header_builder.build();
+    final long header_data_offset = header.dataOffset();
 
-    if (Long.compareUnsigned(
-      this.countingStream().getByteCount(), header.dataOffset()) < 0) {
-      try {
-        this.data_stream.skip(
-          header.dataOffset() - this.countingStream().getByteCount());
-      } catch (final IOException e) {
-        return this.errorExceptionV(e);
+    {
+      final long count = counting_stream.getByteCount();
+      if (Long.compareUnsigned(count, header_data_offset) < 0) {
+        try {
+          this.data_stream.skip(header_data_offset - count);
+        } catch (final IOException e) {
+          return this.errorExceptionV(e);
+        }
       }
     }
 
@@ -241,14 +278,16 @@ final class VGMParserVanillaHeader
       new VGMParserVanillaBody(
         header,
         this.path,
-        this.stream,
-        this.countingStream(),
+        counting_stream,
         this.data_stream);
 
-    Invariants.checkInvariantL(
-      this.countingStream().getByteCount(),
-      this.countingStream().getByteCount() == header.dataOffset(),
-      position -> "Position must be at " + header.dataOffset());
+    {
+      final long count = counting_stream.getByteCount();
+      Invariants.checkInvariantL(
+        count,
+        count == header_data_offset,
+        position -> "Position must be at " + header_data_offset);
+    }
 
     return Validation.valid(Tuple.of(body, header));
   }
@@ -265,22 +304,23 @@ final class VGMParserVanillaHeader
 
     if (!VGMParserVanillaSupported.SUPPORTED.contains(
       VGMVersion.of(header_version))) {
+      final String separator = System.lineSeparator();
       return this.errorV(
         new StringBuilder(128)
           .append("Unsupported format version.")
-          .append(System.lineSeparator())
+          .append(separator)
           .append("  Position: ")
           .append(this.countingStream().getByteCount())
-          .append(System.lineSeparator())
+          .append(separator)
           .append("  Received: ")
           .append(Integer.toUnsignedString(header_version, 16))
-          .append(System.lineSeparator())
+          .append(separator)
           .append("  Expected: One of ")
           .append(
             VGMParserVanillaSupported.SUPPORTED
               .map(v -> Integer.toUnsignedString(v.version(), 16))
               .collect(Collectors.joining(" ")))
-          .append(System.lineSeparator())
+          .append(separator)
           .toString());
     }
 
@@ -303,19 +343,20 @@ final class VGMParserVanillaHeader
     }
 
     if (!Arrays.equals(MAGIC, this.buffer)) {
+      final String separator = System.lineSeparator();
       return this.errorV(
         new StringBuilder(128)
           .append("Bad magic number.")
-          .append(System.lineSeparator())
+          .append(separator)
           .append("  Position: ")
           .append(this.countingStream().getByteCount())
-          .append(System.lineSeparator())
+          .append(separator)
           .append("  Received: ")
-          .append(DatatypeConverter.printHexBinary(this.buffer))
-          .append(System.lineSeparator())
+          .append(bytesToHex(this.buffer))
+          .append(separator)
           .append("  Expected: ")
-          .append(DatatypeConverter.printHexBinary(MAGIC))
-          .append(System.lineSeparator())
+          .append(bytesToHex(MAGIC))
+          .append(separator)
           .toString());
     }
 
@@ -324,7 +365,6 @@ final class VGMParserVanillaHeader
 
   @Override
   public void close()
-    throws IOException
   {
 
   }

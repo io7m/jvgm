@@ -23,12 +23,6 @@
     <mdep.analyze.skip>true</mdep.analyze.skip>
   </properties>
 
-  <scm>
-    <url>${project.parent.scm.url}</url>
-    <connection>${project.parent.scm.connection}</connection>
-    <developerConnection>${project.parent.scm.developerConnection}</developerConnection>
-  </scm>
-
   <dependencies>
     <dependency>
       <groupId>${project.groupId}</groupId>
@@ -52,8 +46,14 @@
     </dependency>
 
     <dependency>
-      <groupId>com.io7m.jnull</groupId>
-      <artifactId>com.io7m.jnull.core</artifactId>
+      <groupId>com.io7m.immutables.style</groupId>
+      <artifactId>com.io7m.immutables.style</artifactId>
+      <scope>provided</scope>
+    </dependency>
+    <dependency>
+      <groupId>org.immutables</groupId>
+      <artifactId>value</artifactId>
+      <scope>provided</scope>
     </dependency>
   </dependencies>
 

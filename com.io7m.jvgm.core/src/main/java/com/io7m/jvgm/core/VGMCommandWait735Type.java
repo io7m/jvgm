@@ -16,13 +16,14 @@
 
 package com.io7m.jvgm.core;
 
+import com.io7m.immutables.styles.ImmutablesStyleType;
 import org.immutables.value.Value;
 
 /**
  * Wait for 735 samples.
  */
 
-@VGMImmutableStyleType
+@ImmutablesStyleType
 @Value.Immutable
 public interface VGMCommandWait735Type extends VGMCommandWaitType
 {

@@ -18,6 +18,5 @@
  * Vanilla parser implementation.
  */
 
-@com.io7m.jnull.NonNullByDefault
 package com.io7m.jvgm.parser.vanilla;
 

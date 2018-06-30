@@ -20,15 +20,16 @@ import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
 import java.util.HashMap;
+import java.util.Optional;
 
 /**
  * A YM2612 state interpreter.
  */
 
-public final class VGMInterpreterYM2612
+public final class VGMYM2612Interpreter
 {
   private static final Logger LOG =
-    LoggerFactory.getLogger(VGMInterpreterYM2612.class);
+    LoggerFactory.getLogger(VGMYM2612Interpreter.class);
 
   private static final int LFO_ENABLE = 0x22;
   private static final int TIMER_B = 0x26;
@@ -269,7 +270,7 @@ public final class VGMInterpreterYM2612
   private static final int CHANNEL_4_STEREO_AND_LFO_SENSITIVITY = 0xb5;
   private static final int CHANNEL_5_STEREO_AND_LFO_SENSITIVITY = 0xb6;
 
-  private final HashMap<Integer, Channel> channels;
+  private final HashMap<Integer, VGMYM2612Channel> channels;
   private int lfo_enable;
   private int lfo_frequency;
   private int dac_enable;
@@ -286,12 +287,25 @@ public final class VGMInterpreterYM2612
    * Construct an interpreter.
    */
 
-  public VGMInterpreterYM2612()
+  public VGMYM2612Interpreter()
   {
     this.channels = new HashMap<>(6);
     for (int index = 0; index < 6; ++index) {
-      this.channels.put(Integer.valueOf(index), new Channel(index));
+      this.channels.put(Integer.valueOf(index), new VGMYM2612Channel(this, index));
     }
+  }
+
+  /**
+   * @param in_index The channel index
+   *
+   * @return The channel with the given index
+   */
+
+  public VGMYM2612Channel channel(
+    final int in_index)
+  {
+    return Optional.ofNullable(this.channels.get(Integer.valueOf(in_index)))
+      .orElseThrow(() -> new IllegalArgumentException("Illegal channel index: " + in_index));
   }
 
   /**
@@ -301,6 +315,8 @@ public final class VGMInterpreterYM2612
    * @param value    The value (in the range {@code [0x0, 0xff]})
    */
 
+  // Switch-based interpreters suffer from high cyclomatic complexity
+  // CHECKSTYLE:OFF
   public void writeRegisterPort1(
     final int register,
     final int value)
@@ -311,7 +327,6 @@ public final class VGMInterpreterYM2612
       Integer.toUnsignedString(value, 16));
 
     switch (register & 0xff) {
-
       case 0x90:
       case 0x91:
       case 0x92:
@@ -332,620 +347,373 @@ public final class VGMInterpreterYM2612
       }
 
       case CHANNEL_3_STEREO_AND_LFO_SENSITIVITY: {
-        this.channels.get(Integer.valueOf(3)).setStereoAndLFOSensitivity(value);
+        this.channel(3).setStereoAndLFOSensitivity(value);
         break;
       }
       case CHANNEL_4_STEREO_AND_LFO_SENSITIVITY: {
-        this.channels.get(Integer.valueOf(4)).setStereoAndLFOSensitivity(value);
+        this.channel(4).setStereoAndLFOSensitivity(value);
         break;
       }
       case CHANNEL_5_STEREO_AND_LFO_SENSITIVITY: {
-        this.channels.get(Integer.valueOf(5)).setStereoAndLFOSensitivity(value);
+        this.channel(5).setStereoAndLFOSensitivity(value);
         break;
       }
-
       case CHANNEL_3_ALGORITHM_AND_FEEDBACK: {
-        this.channels.get(Integer.valueOf(3)).setAlgorithmAndFeedback(value);
+        this.channel(3).setAlgorithmAndFeedback(value);
         break;
       }
-
       case CHANNEL_4_ALGORITHM_AND_FEEDBACK: {
-        this.channels.get(Integer.valueOf(4)).setAlgorithmAndFeedback(value);
+        this.channel(4).setAlgorithmAndFeedback(value);
         break;
       }
-
       case CHANNEL_5_ALGORITHM_AND_FEEDBACK: {
-        this.channels.get(Integer.valueOf(5)).setAlgorithmAndFeedback(value);
+        this.channel(5).setAlgorithmAndFeedback(value);
         break;
       }
-
       case CHANNEL_3_FREQUENCY_LSB: {
-        this.channels.get(Integer.valueOf(3)).setFrequencyLSB(value);
+        this.channel(3).setFrequencyLSB(value);
         break;
       }
-
       case CHANNEL_3_FREQUENCY_MSB: {
-        this.channels.get(Integer.valueOf(3)).setFrequencyMSB(value);
+        this.channel(3).setFrequencyMSB(value);
         break;
       }
-
       case CHANNEL_4_FREQUENCY_LSB: {
-        this.channels.get(Integer.valueOf(4)).setFrequencyLSB(value);
+        this.channel(4).setFrequencyLSB(value);
         break;
       }
-
       case CHANNEL_4_FREQUENCY_MSB: {
-        this.channels.get(Integer.valueOf(4)).setFrequencyMSB(value);
+        this.channel(4).setFrequencyMSB(value);
         break;
       }
-
       case CHANNEL_5_FREQUENCY_LSB: {
-        final Channel channel = this.channels.get(Integer.valueOf(5));
+        final VGMYM2612Channel channel = this.channel(5);
         if (this.channel_3_6_special_mode) {
-          channel.operators.get(Integer.valueOf(0)).setFrequencyLSB(value);
+          channel.operator(0).setFrequencyLSB(value);
         } else {
           channel.setFrequencyLSB(value);
         }
         break;
       }
-
       case CHANNEL_5_FREQUENCY_MSB: {
-        final Channel channel = this.channels.get(Integer.valueOf(5));
+        final VGMYM2612Channel channel = this.channel(5);
         if (this.channel_3_6_special_mode) {
-          channel.operators.get(Integer.valueOf(0)).setFrequencyMSB(value);
+          channel.operator(0).setFrequencyMSB(value);
         } else {
           channel.setFrequencyMSB(value);
         }
         break;
       }
-
       case CHANNEL_5_FREQUENCY_LSB_OPERATOR_1: {
-        this.channels.get(Integer.valueOf(5))
-          .operators.get(Integer.valueOf(1))
-          .setFrequencyLSB(value);
+        this.channel(5).operator(1).setFrequencyLSB(value);
         break;
       }
-
       case CHANNEL_5_FREQUENCY_MSB_OPERATOR_1: {
-        this.channels.get(Integer.valueOf(5))
-          .operators.get(Integer.valueOf(1))
-          .setFrequencyMSB(value);
+        this.channel(5).operator(1).setFrequencyMSB(value);
         break;
       }
-
       case CHANNEL_5_FREQUENCY_LSB_OPERATOR_2: {
-        this.channels.get(Integer.valueOf(5))
-          .operators.get(Integer.valueOf(2))
-          .setFrequencyLSB(value);
+        this.channel(5).operator(2).setFrequencyLSB(value);
         break;
       }
-
       case CHANNEL_5_FREQUENCY_MSB_OPERATOR_2: {
-        this.channels.get(Integer.valueOf(5))
-          .operators.get(Integer.valueOf(2))
-          .setFrequencyMSB(value);
+        this.channel(5).operator(2).setFrequencyMSB(value);
         break;
       }
-
       case CHANNEL_5_FREQUENCY_LSB_OPERATOR_3: {
-        this.channels.get(Integer.valueOf(5))
-          .operators.get(Integer.valueOf(3))
-          .setFrequencyLSB(value);
+        this.channel(5).operator(3).setFrequencyLSB(value);
         break;
       }
-
       case CHANNEL_5_FREQUENCY_MSB_OPERATOR_3: {
-        this.channels.get(Integer.valueOf(5))
-          .operators.get(Integer.valueOf(3))
-          .setFrequencyMSB(value);
+        this.channel(5).operator(3).setFrequencyMSB(value);
         break;
       }
-
       case CHANNEL_3_OPERATOR_0_DETUNE_MULTIPLE: {
-        this.channels.get(Integer.valueOf(3))
-          .operators.get(Integer.valueOf(0))
-          .setDetuneAndMultiple(value);
+        this.channel(3).operator(0).setDetuneAndMultiple(value);
         break;
       }
-
       case CHANNEL_3_OPERATOR_1_DETUNE_MULTIPLE: {
-        this.channels.get(Integer.valueOf(3))
-          .operators.get(Integer.valueOf(1))
-          .setDetuneAndMultiple(value);
+        this.channel(3).operator(1).setDetuneAndMultiple(value);
         break;
       }
-
       case CHANNEL_3_OPERATOR_2_DETUNE_MULTIPLE: {
-        this.channels.get(Integer.valueOf(3))
-          .operators.get(Integer.valueOf(2))
-          .setDetuneAndMultiple(value);
+        this.channel(3).operator(2).setDetuneAndMultiple(value);
         break;
       }
-
       case CHANNEL_3_OPERATOR_3_DETUNE_MULTIPLE: {
-        this.channels.get(Integer.valueOf(3))
-          .operators.get(Integer.valueOf(3))
-          .setDetuneAndMultiple(value);
+        this.channel(3).operator(3).setDetuneAndMultiple(value);
         break;
       }
-
       case CHANNEL_3_OPERATOR_0_VOLUME_INVERSE: {
-        this.channels.get(Integer.valueOf(3))
-          .operators.get(Integer.valueOf(0))
-          .setVolumeInverse(value);
+        this.channel(3).operator(0).setVolumeInverse(value);
         break;
       }
-
       case CHANNEL_3_OPERATOR_1_VOLUME_INVERSE: {
-        this.channels.get(Integer.valueOf(3))
-          .operators.get(Integer.valueOf(1))
-          .setVolumeInverse(value);
+        this.channel(3).operator(1).setVolumeInverse(value);
         break;
       }
-
       case CHANNEL_3_OPERATOR_2_VOLUME_INVERSE: {
-        this.channels.get(Integer.valueOf(3))
-          .operators.get(Integer.valueOf(2))
-          .setVolumeInverse(value);
+        this.channel(3).operator(2).setVolumeInverse(value);
         break;
       }
-
       case CHANNEL_3_OPERATOR_3_VOLUME_INVERSE: {
-        this.channels.get(Integer.valueOf(3))
-          .operators.get(Integer.valueOf(3))
-          .setVolumeInverse(value);
+        this.channel(3).operator(3).setVolumeInverse(value);
         break;
       }
-
       case CHANNEL_3_OPERATOR_0_RATE_SCALING_AND_ATTACK_RATE: {
-        this.channels.get(Integer.valueOf(3))
-          .operators.get(Integer.valueOf(0))
-          .setRateScalingAndAttackRate(value);
+        this.channel(3).operator(0).setRateScalingAndAttackRate(value);
         break;
       }
-
       case CHANNEL_3_OPERATOR_1_RATE_SCALING_AND_ATTACK_RATE: {
-        this.channels.get(Integer.valueOf(3))
-          .operators.get(Integer.valueOf(1))
-          .setRateScalingAndAttackRate(value);
+        this.channel(3).operator(1).setRateScalingAndAttackRate(value);
         break;
       }
-
       case CHANNEL_3_OPERATOR_2_RATE_SCALING_AND_ATTACK_RATE: {
-        this.channels.get(Integer.valueOf(3))
-          .operators.get(Integer.valueOf(2))
-          .setRateScalingAndAttackRate(value);
+        this.channel(3).operator(2).setRateScalingAndAttackRate(value);
         break;
       }
-
       case CHANNEL_3_OPERATOR_3_RATE_SCALING_AND_ATTACK_RATE: {
-        this.channels.get(Integer.valueOf(3))
-          .operators.get(Integer.valueOf(3))
-          .setRateScalingAndAttackRate(value);
+        this.channel(3).operator(3).setRateScalingAndAttackRate(value);
         break;
       }
-
       case CHANNEL_3_OPERATOR_0_RATE_DECAY_AND_AMPLITUDE_MODULATION: {
-        this.channels.get(Integer.valueOf(3))
-          .operators.get(Integer.valueOf(0))
-          .setRateDecayAndAmplitudeModulation(value);
+        this.channel(3).operator(0).setRateDecayAndAmplitudeModulation(value);
         break;
       }
-
       case CHANNEL_3_OPERATOR_1_RATE_DECAY_AND_AMPLITUDE_MODULATION: {
-        this.channels.get(Integer.valueOf(3))
-          .operators.get(Integer.valueOf(1))
-          .setRateDecayAndAmplitudeModulation(value);
+        this.channel(3).operator(1).setRateDecayAndAmplitudeModulation(value);
         break;
       }
-
       case CHANNEL_3_OPERATOR_2_RATE_DECAY_AND_AMPLITUDE_MODULATION: {
-        this.channels.get(Integer.valueOf(3))
-          .operators.get(Integer.valueOf(2))
-          .setRateDecayAndAmplitudeModulation(value);
+        this.channel(3).operator(2).setRateDecayAndAmplitudeModulation(value);
         break;
       }
-
       case CHANNEL_3_OPERATOR_3_RATE_DECAY_AND_AMPLITUDE_MODULATION: {
-        this.channels.get(Integer.valueOf(3))
-          .operators.get(Integer.valueOf(3))
-          .setRateDecayAndAmplitudeModulation(value);
+        this.channel(3).operator(3).setRateDecayAndAmplitudeModulation(value);
         break;
       }
-
       case CHANNEL_3_OPERATOR_0_RATE_DECAY_SECONDARY: {
-        this.channels.get(Integer.valueOf(3))
-          .operators.get(Integer.valueOf(0))
-          .setRateDecaySecondary(value);
+        this.channel(3).operator(0).setRateDecaySecondary(value);
         break;
       }
-
       case CHANNEL_3_OPERATOR_1_RATE_DECAY_SECONDARY: {
-        this.channels.get(Integer.valueOf(3))
-          .operators.get(Integer.valueOf(1))
-          .setRateDecaySecondary(value);
+        this.channel(3).operator(1).setRateDecaySecondary(value);
         break;
       }
-
       case CHANNEL_3_OPERATOR_2_RATE_DECAY_SECONDARY: {
-        this.channels.get(Integer.valueOf(3))
-          .operators.get(Integer.valueOf(2))
-          .setRateDecaySecondary(value);
+        this.channel(3).operator(2).setRateDecaySecondary(value);
         break;
       }
-
       case CHANNEL_3_OPERATOR_3_RATE_DECAY_SECONDARY: {
-        this.channels.get(Integer.valueOf(3))
-          .operators.get(Integer.valueOf(3))
-          .setRateDecaySecondary(value);
+        this.channel(3).operator(3).setRateDecaySecondary(value);
         break;
       }
-
       case CHANNEL_3_OPERATOR_0_RATE_RELEASE_SECONDARY_AMPLITUDE: {
-        this.channels.get(Integer.valueOf(3))
-          .operators.get(Integer.valueOf(0))
-          .setRateReleaseAndSecondaryAmplitude(value);
+        this.channel(3).operator(0).setRateReleaseAndSecondaryAmplitude(value);
         break;
       }
-
       case CHANNEL_3_OPERATOR_1_RATE_RELEASE_SECONDARY_AMPLITUDE: {
-        this.channels.get(Integer.valueOf(3))
-          .operators.get(Integer.valueOf(1))
-          .setRateReleaseAndSecondaryAmplitude(value);
+        this.channel(3).operator(1).setRateReleaseAndSecondaryAmplitude(value);
         break;
       }
-
       case CHANNEL_3_OPERATOR_2_RATE_RELEASE_SECONDARY_AMPLITUDE: {
-        this.channels.get(Integer.valueOf(3))
-          .operators.get(Integer.valueOf(2))
-          .setRateReleaseAndSecondaryAmplitude(value);
+        this.channel(3).operator(2).setRateReleaseAndSecondaryAmplitude(value);
         break;
       }
-
       case CHANNEL_3_OPERATOR_3_RATE_RELEASE_SECONDARY_AMPLITUDE: {
-        this.channels.get(Integer.valueOf(3))
-          .operators.get(Integer.valueOf(3))
-          .setRateReleaseAndSecondaryAmplitude(value);
+        this.channel(3).operator(3).setRateReleaseAndSecondaryAmplitude(value);
         break;
       }
-
-      // Channel 4
-
       case CHANNEL_4_OPERATOR_0_DETUNE_MULTIPLE: {
-        this.channels.get(Integer.valueOf(4))
-          .operators.get(Integer.valueOf(0))
-          .setDetuneAndMultiple(value);
+        this.channel(4).operator(0).setDetuneAndMultiple(value);
         break;
       }
-
       case CHANNEL_4_OPERATOR_1_DETUNE_MULTIPLE: {
-        this.channels.get(Integer.valueOf(4))
-          .operators.get(Integer.valueOf(1))
-          .setDetuneAndMultiple(value);
+        this.channel(4).operator(1).setDetuneAndMultiple(value);
         break;
       }
-
       case CHANNEL_4_OPERATOR_2_DETUNE_MULTIPLE: {
-        this.channels.get(Integer.valueOf(4))
-          .operators.get(Integer.valueOf(2))
-          .setDetuneAndMultiple(value);
+        this.channel(4).operator(2).setDetuneAndMultiple(value);
         break;
       }
-
       case CHANNEL_4_OPERATOR_3_DETUNE_MULTIPLE: {
-        this.channels.get(Integer.valueOf(4))
-          .operators.get(Integer.valueOf(3))
-          .setDetuneAndMultiple(value);
+        this.channel(4).operator(3).setDetuneAndMultiple(value);
         break;
       }
-
       case CHANNEL_4_OPERATOR_0_VOLUME_INVERSE: {
-        this.channels.get(Integer.valueOf(4))
-          .operators.get(Integer.valueOf(0))
-          .setVolumeInverse(value);
+        this.channel(4).operator(0).setVolumeInverse(value);
         break;
       }
-
       case CHANNEL_4_OPERATOR_1_VOLUME_INVERSE: {
-        this.channels.get(Integer.valueOf(4))
-          .operators.get(Integer.valueOf(1))
-          .setVolumeInverse(value);
+        this.channel(4).operator(1).setVolumeInverse(value);
         break;
       }
-
       case CHANNEL_4_OPERATOR_2_VOLUME_INVERSE: {
-        this.channels.get(Integer.valueOf(4))
-          .operators.get(Integer.valueOf(2))
-          .setVolumeInverse(value);
+        this.channel(4).operator(2).setVolumeInverse(value);
         break;
       }
-
       case CHANNEL_4_OPERATOR_3_VOLUME_INVERSE: {
-        this.channels.get(Integer.valueOf(4))
-          .operators.get(Integer.valueOf(3))
-          .setVolumeInverse(value);
+        this.channel(4).operator(3).setVolumeInverse(value);
         break;
       }
-
       case CHANNEL_4_OPERATOR_0_RATE_SCALING_AND_ATTACK_RATE: {
-        this.channels.get(Integer.valueOf(4))
-          .operators.get(Integer.valueOf(0))
-          .setRateScalingAndAttackRate(value);
+        this.channel(4).operator(0).setRateScalingAndAttackRate(value);
         break;
       }
-
       case CHANNEL_4_OPERATOR_1_RATE_SCALING_AND_ATTACK_RATE: {
-        this.channels.get(Integer.valueOf(4))
-          .operators.get(Integer.valueOf(1))
-          .setRateScalingAndAttackRate(value);
+        this.channel(4).operator(1).setRateScalingAndAttackRate(value);
         break;
       }
-
       case CHANNEL_4_OPERATOR_2_RATE_SCALING_AND_ATTACK_RATE: {
-        this.channels.get(Integer.valueOf(4))
-          .operators.get(Integer.valueOf(2))
-          .setRateScalingAndAttackRate(value);
+        this.channel(4).operator(2).setRateScalingAndAttackRate(value);
         break;
       }
-
       case CHANNEL_4_OPERATOR_3_RATE_SCALING_AND_ATTACK_RATE: {
-        this.channels.get(Integer.valueOf(4))
-          .operators.get(Integer.valueOf(3))
-          .setRateScalingAndAttackRate(value);
+        this.channel(4).operator(3).setRateScalingAndAttackRate(value);
         break;
       }
-
       case CHANNEL_4_OPERATOR_0_RATE_DECAY_AND_AMPLITUDE_MODULATION: {
-        this.channels.get(Integer.valueOf(4))
-          .operators.get(Integer.valueOf(0))
-          .setRateDecayAndAmplitudeModulation(value);
+        this.channel(4).operator(0).setRateDecayAndAmplitudeModulation(value);
         break;
       }
-
       case CHANNEL_4_OPERATOR_1_RATE_DECAY_AND_AMPLITUDE_MODULATION: {
-        this.channels.get(Integer.valueOf(4))
-          .operators.get(Integer.valueOf(1))
-          .setRateDecayAndAmplitudeModulation(value);
+        this.channel(4).operator(1).setRateDecayAndAmplitudeModulation(value);
         break;
       }
-
       case CHANNEL_4_OPERATOR_2_RATE_DECAY_AND_AMPLITUDE_MODULATION: {
-        this.channels.get(Integer.valueOf(4))
-          .operators.get(Integer.valueOf(2))
-          .setRateDecayAndAmplitudeModulation(value);
+        this.channel(4).operator(2).setRateDecayAndAmplitudeModulation(value);
         break;
       }
-
       case CHANNEL_4_OPERATOR_3_RATE_DECAY_AND_AMPLITUDE_MODULATION: {
-        this.channels.get(Integer.valueOf(4))
-          .operators.get(Integer.valueOf(3))
-          .setRateDecayAndAmplitudeModulation(value);
+        this.channel(4).operator(3).setRateDecayAndAmplitudeModulation(value);
         break;
       }
-
       case CHANNEL_4_OPERATOR_0_RATE_DECAY_SECONDARY: {
-        this.channels.get(Integer.valueOf(4))
-          .operators.get(Integer.valueOf(0))
-          .setRateDecaySecondary(value);
+        this.channel(4).operator(0).setRateDecaySecondary(value);
         break;
       }
-
       case CHANNEL_4_OPERATOR_1_RATE_DECAY_SECONDARY: {
-        this.channels.get(Integer.valueOf(4))
-          .operators.get(Integer.valueOf(1))
-          .setRateDecaySecondary(value);
+        this.channel(4).operator(1).setRateDecaySecondary(value);
         break;
       }
-
       case CHANNEL_4_OPERATOR_2_RATE_DECAY_SECONDARY: {
-        this.channels.get(Integer.valueOf(4))
-          .operators.get(Integer.valueOf(2))
-          .setRateDecaySecondary(value);
+        this.channel(4).operator(2).setRateDecaySecondary(value);
         break;
       }
-
       case CHANNEL_4_OPERATOR_3_RATE_DECAY_SECONDARY: {
-        this.channels.get(Integer.valueOf(4))
-          .operators.get(Integer.valueOf(3))
-          .setRateDecaySecondary(value);
+        this.channel(4).operator(3).setRateDecaySecondary(value);
         break;
       }
-
       case CHANNEL_4_OPERATOR_0_RATE_RELEASE_SECONDARY_AMPLITUDE: {
-        this.channels.get(Integer.valueOf(4))
-          .operators.get(Integer.valueOf(0))
-          .setRateReleaseAndSecondaryAmplitude(value);
+        this.channel(4).operator(0).setRateReleaseAndSecondaryAmplitude(value);
         break;
       }
-
       case CHANNEL_4_OPERATOR_1_RATE_RELEASE_SECONDARY_AMPLITUDE: {
-        this.channels.get(Integer.valueOf(4))
-          .operators.get(Integer.valueOf(1))
-          .setRateReleaseAndSecondaryAmplitude(value);
+        this.channel(4).operator(1).setRateReleaseAndSecondaryAmplitude(value);
         break;
       }
-
       case CHANNEL_4_OPERATOR_2_RATE_RELEASE_SECONDARY_AMPLITUDE: {
-        this.channels.get(Integer.valueOf(4))
-          .operators.get(Integer.valueOf(2))
-          .setRateReleaseAndSecondaryAmplitude(value);
+        this.channel(4).operator(2).setRateReleaseAndSecondaryAmplitude(value);
         break;
       }
-
       case CHANNEL_4_OPERATOR_3_RATE_RELEASE_SECONDARY_AMPLITUDE: {
-        this.channels.get(Integer.valueOf(4))
-          .operators.get(Integer.valueOf(3))
-          .setRateReleaseAndSecondaryAmplitude(value);
+        this.channel(4).operator(3).setRateReleaseAndSecondaryAmplitude(value);
         break;
       }
-
-      // Channel 5
-
       case CHANNEL_5_OPERATOR_0_DETUNE_MULTIPLE: {
-        this.channels.get(Integer.valueOf(5))
-          .operators.get(Integer.valueOf(0))
-          .setDetuneAndMultiple(value);
+        this.channel(5).operator(0).setDetuneAndMultiple(value);
         break;
       }
-
       case CHANNEL_5_OPERATOR_1_DETUNE_MULTIPLE: {
-        this.channels.get(Integer.valueOf(5))
-          .operators.get(Integer.valueOf(1))
-          .setDetuneAndMultiple(value);
+        this.channel(5).operator(1).setDetuneAndMultiple(value);
         break;
       }
-
       case CHANNEL_5_OPERATOR_2_DETUNE_MULTIPLE: {
-        this.channels.get(Integer.valueOf(5))
-          .operators.get(Integer.valueOf(2))
-          .setDetuneAndMultiple(value);
+        this.channel(5).operator(2).setDetuneAndMultiple(value);
         break;
       }
-
       case CHANNEL_5_OPERATOR_3_DETUNE_MULTIPLE: {
-        this.channels.get(Integer.valueOf(5))
-          .operators.get(Integer.valueOf(3))
-          .setDetuneAndMultiple(value);
+        this.channel(5).operator(3).setDetuneAndMultiple(value);
         break;
       }
-
       case CHANNEL_5_OPERATOR_0_VOLUME_INVERSE: {
-        this.channels.get(Integer.valueOf(5))
-          .operators.get(Integer.valueOf(0))
-          .setVolumeInverse(value);
+        this.channel(5).operator(0).setVolumeInverse(value);
         break;
       }
-
       case CHANNEL_5_OPERATOR_1_VOLUME_INVERSE: {
-        this.channels.get(Integer.valueOf(5))
-          .operators.get(Integer.valueOf(1))
-          .setVolumeInverse(value);
+        this.channel(5).operator(1).setVolumeInverse(value);
         break;
       }
-
       case CHANNEL_5_OPERATOR_2_VOLUME_INVERSE: {
-        this.channels.get(Integer.valueOf(5))
-          .operators.get(Integer.valueOf(2))
-          .setVolumeInverse(value);
+        this.channel(5).operator(2).setVolumeInverse(value);
         break;
       }
-
       case CHANNEL_5_OPERATOR_3_VOLUME_INVERSE: {
-        this.channels.get(Integer.valueOf(5))
-          .operators.get(Integer.valueOf(3))
-          .setVolumeInverse(value);
+        this.channel(5).operator(3).setVolumeInverse(value);
         break;
       }
-
       case CHANNEL_5_OPERATOR_0_RATE_SCALING_AND_ATTACK_RATE: {
-        this.channels.get(Integer.valueOf(5))
-          .operators.get(Integer.valueOf(0))
-          .setRateScalingAndAttackRate(value);
+        this.channel(5).operator(0).setRateScalingAndAttackRate(value);
         break;
       }
-
       case CHANNEL_5_OPERATOR_1_RATE_SCALING_AND_ATTACK_RATE: {
-        this.channels.get(Integer.valueOf(5))
-          .operators.get(Integer.valueOf(1))
-          .setRateScalingAndAttackRate(value);
+        this.channel(5).operator(1).setRateScalingAndAttackRate(value);
         break;
       }
-
       case CHANNEL_5_OPERATOR_2_RATE_SCALING_AND_ATTACK_RATE: {
-        this.channels.get(Integer.valueOf(5))
-          .operators.get(Integer.valueOf(2))
-          .setRateScalingAndAttackRate(value);
+        this.channel(5).operator(2).setRateScalingAndAttackRate(value);
         break;
       }
-
       case CHANNEL_5_OPERATOR_3_RATE_SCALING_AND_ATTACK_RATE: {
-        this.channels.get(Integer.valueOf(5))
-          .operators.get(Integer.valueOf(3))
-          .setRateScalingAndAttackRate(value);
+        this.channel(5).operator(3).setRateScalingAndAttackRate(value);
         break;
       }
-
       case CHANNEL_5_OPERATOR_0_RATE_DECAY_AND_AMPLITUDE_MODULATION: {
-        this.channels.get(Integer.valueOf(5))
-          .operators.get(Integer.valueOf(0))
-          .setRateDecayAndAmplitudeModulation(value);
+        this.channel(5).operator(0).setRateDecayAndAmplitudeModulation(value);
         break;
       }
-
       case CHANNEL_5_OPERATOR_1_RATE_DECAY_AND_AMPLITUDE_MODULATION: {
-        this.channels.get(Integer.valueOf(5))
-          .operators.get(Integer.valueOf(1))
-          .setRateDecayAndAmplitudeModulation(value);
+        this.channel(5).operator(1).setRateDecayAndAmplitudeModulation(value);
         break;
       }
-
       case CHANNEL_5_OPERATOR_2_RATE_DECAY_AND_AMPLITUDE_MODULATION: {
-        this.channels.get(Integer.valueOf(5))
-          .operators.get(Integer.valueOf(2))
-          .setRateDecayAndAmplitudeModulation(value);
+        this.channel(5).operator(2).setRateDecayAndAmplitudeModulation(value);
         break;
       }
-
       case CHANNEL_5_OPERATOR_3_RATE_DECAY_AND_AMPLITUDE_MODULATION: {
-        this.channels.get(Integer.valueOf(5))
-          .operators.get(Integer.valueOf(3))
-          .setRateDecayAndAmplitudeModulation(value);
+        this.channel(5).operator(3).setRateDecayAndAmplitudeModulation(value);
         break;
       }
-
       case CHANNEL_5_OPERATOR_0_RATE_DECAY_SECONDARY: {
-        this.channels.get(Integer.valueOf(5))
-          .operators.get(Integer.valueOf(0))
-          .setRateDecaySecondary(value);
+        this.channel(5).operator(0).setRateDecaySecondary(value);
         break;
       }
-
       case CHANNEL_5_OPERATOR_1_RATE_DECAY_SECONDARY: {
-        this.channels.get(Integer.valueOf(5))
-          .operators.get(Integer.valueOf(1))
-          .setRateDecaySecondary(value);
+        this.channel(5).operator(1).setRateDecaySecondary(value);
         break;
       }
-
       case CHANNEL_5_OPERATOR_2_RATE_DECAY_SECONDARY: {
-        this.channels.get(Integer.valueOf(5))
-          .operators.get(Integer.valueOf(2))
-          .setRateDecaySecondary(value);
+        this.channel(5).operator(2).setRateDecaySecondary(value);
         break;
       }
-
       case CHANNEL_5_OPERATOR_3_RATE_DECAY_SECONDARY: {
-        this.channels.get(Integer.valueOf(5))
-          .operators.get(Integer.valueOf(3))
-          .setRateDecaySecondary(value);
+        this.channel(5).operator(3).setRateDecaySecondary(value);
         break;
       }
-
       case CHANNEL_5_OPERATOR_0_RATE_RELEASE_SECONDARY_AMPLITUDE: {
-        this.channels.get(Integer.valueOf(5))
-          .operators.get(Integer.valueOf(0))
-          .setRateReleaseAndSecondaryAmplitude(value);
+        this.channel(5).operator(0).setRateReleaseAndSecondaryAmplitude(value);
         break;
       }
-
       case CHANNEL_5_OPERATOR_1_RATE_RELEASE_SECONDARY_AMPLITUDE: {
-        this.channels.get(Integer.valueOf(5))
-          .operators.get(Integer.valueOf(1))
-          .setRateReleaseAndSecondaryAmplitude(value);
+        this.channel(5).operator(1).setRateReleaseAndSecondaryAmplitude(value);
         break;
       }
-
       case CHANNEL_5_OPERATOR_2_RATE_RELEASE_SECONDARY_AMPLITUDE: {
-        this.channels.get(Integer.valueOf(5))
-          .operators.get(Integer.valueOf(2))
-          .setRateReleaseAndSecondaryAmplitude(value);
+        this.channel(5).operator(2).setRateReleaseAndSecondaryAmplitude(value);
         break;
       }
-
       case CHANNEL_5_OPERATOR_3_RATE_RELEASE_SECONDARY_AMPLITUDE: {
-        this.channels.get(Integer.valueOf(5))
-          .operators.get(Integer.valueOf(3))
-          .setRateReleaseAndSecondaryAmplitude(value);
+        this.channel(5).operator(3).setRateReleaseAndSecondaryAmplitude(value);
         break;
       }
 
@@ -958,6 +726,7 @@ public final class VGMInterpreterYM2612
       }
     }
   }
+  // CHECKSTYLE:ON
 
   /**
    * Write {@code value} to {@code register} in port 0.
@@ -966,6 +735,8 @@ public final class VGMInterpreterYM2612
    * @param value    The value (in the range {@code [0x0, 0xff]})
    */
 
+  // Switch-based interpreters suffer from high cyclomatic complexity
+  // CHECKSTYLE:OFF
   public void writeRegisterPort0(
     final int register,
     final int value)
@@ -1002,647 +773,393 @@ public final class VGMInterpreterYM2612
       }
 
       case CHANNEL_0_STEREO_AND_LFO_SENSITIVITY: {
-        this.channels.get(Integer.valueOf(0)).setStereoAndLFOSensitivity(value);
+        this.channel(0).setStereoAndLFOSensitivity(value);
         break;
       }
       case CHANNEL_1_STEREO_AND_LFO_SENSITIVITY: {
-        this.channels.get(Integer.valueOf(1)).setStereoAndLFOSensitivity(value);
+        this.channel(1).setStereoAndLFOSensitivity(value);
         break;
       }
       case CHANNEL_2_STEREO_AND_LFO_SENSITIVITY: {
-        this.channels.get(Integer.valueOf(2)).setStereoAndLFOSensitivity(value);
+        this.channel(2).setStereoAndLFOSensitivity(value);
         break;
       }
-
       case CHANNEL_0_ALGORITHM_AND_FEEDBACK: {
-        this.channels.get(Integer.valueOf(0)).setAlgorithmAndFeedback(value);
+        this.channel(0).setAlgorithmAndFeedback(value);
         break;
       }
-
       case CHANNEL_1_ALGORITHM_AND_FEEDBACK: {
-        this.channels.get(Integer.valueOf(1)).setAlgorithmAndFeedback(value);
+        this.channel(1).setAlgorithmAndFeedback(value);
         break;
       }
-
       case CHANNEL_2_ALGORITHM_AND_FEEDBACK: {
-        this.channels.get(Integer.valueOf(2)).setAlgorithmAndFeedback(value);
+        this.channel(2).setAlgorithmAndFeedback(value);
         break;
       }
-
       case CHANNEL_0_FREQUENCY_LSB: {
-        this.channels.get(Integer.valueOf(0)).setFrequencyLSB(value);
+        this.channel(0).setFrequencyLSB(value);
         break;
       }
-
       case CHANNEL_0_FREQUENCY_MSB: {
-        this.channels.get(Integer.valueOf(0)).setFrequencyMSB(value);
+        this.channel(0).setFrequencyMSB(value);
         break;
       }
-
       case CHANNEL_1_FREQUENCY_LSB: {
-        this.channels.get(Integer.valueOf(1)).setFrequencyLSB(value);
+        this.channel(1).setFrequencyLSB(value);
         break;
       }
-
       case CHANNEL_1_FREQUENCY_MSB: {
-        this.channels.get(Integer.valueOf(1)).setFrequencyMSB(value);
+        this.channel(1).setFrequencyMSB(value);
         break;
       }
-
       case CHANNEL_2_FREQUENCY_LSB: {
-        final Channel channel = this.channels.get(Integer.valueOf(2));
+        final VGMYM2612Channel channel = this.channel(2);
         if (this.channel_3_6_special_mode) {
-          channel.operators.get(Integer.valueOf(0)).setFrequencyLSB(value);
+          channel.operator(0).setFrequencyLSB(value);
         } else {
           channel.setFrequencyLSB(value);
         }
         break;
       }
-
       case CHANNEL_2_FREQUENCY_MSB: {
-        final Channel channel = this.channels.get(Integer.valueOf(2));
+        final VGMYM2612Channel channel = this.channel(2);
         if (this.channel_3_6_special_mode) {
-          channel.operators.get(Integer.valueOf(0)).setFrequencyMSB(value);
+          channel.operator(0).setFrequencyMSB(value);
         } else {
           channel.setFrequencyMSB(value);
         }
         break;
       }
-
       case CHANNEL_2_FREQUENCY_LSB_OPERATOR_1: {
-        this.channels.get(Integer.valueOf(2))
-          .operators.get(Integer.valueOf(1))
-          .setFrequencyLSB(value);
+        this.channel(2).operator(1).setFrequencyLSB(value);
         break;
       }
-
       case CHANNEL_2_FREQUENCY_MSB_OPERATOR_1: {
-        this.channels.get(Integer.valueOf(2))
-          .operators.get(Integer.valueOf(1))
-          .setFrequencyMSB(value);
+        this.channel(2).operator(1).setFrequencyMSB(value);
         break;
       }
-
       case CHANNEL_2_FREQUENCY_LSB_OPERATOR_2: {
-        this.channels.get(Integer.valueOf(2))
-          .operators.get(Integer.valueOf(2))
-          .setFrequencyLSB(value);
+        this.channel(2).operator(2).setFrequencyLSB(value);
         break;
       }
-
       case CHANNEL_2_FREQUENCY_MSB_OPERATOR_2: {
-        this.channels.get(Integer.valueOf(2))
-          .operators.get(Integer.valueOf(2))
-          .setFrequencyMSB(value);
+        this.channel(2).operator(2).setFrequencyMSB(value);
         break;
       }
-
       case CHANNEL_2_FREQUENCY_LSB_OPERATOR_3: {
-        this.channels.get(Integer.valueOf(2))
-          .operators.get(Integer.valueOf(3))
-          .setFrequencyLSB(value);
+        this.channel(2).operator(3).setFrequencyLSB(value);
         break;
       }
-
       case CHANNEL_2_FREQUENCY_MSB_OPERATOR_3: {
-        this.channels.get(Integer.valueOf(2))
-          .operators.get(Integer.valueOf(3))
-          .setFrequencyMSB(value);
+        this.channel(2).operator(3).setFrequencyMSB(value);
         break;
       }
-
       case DAC_DATA: {
         this.setDACData(value);
         break;
       }
-
       case DAC_ENABLE: {
         this.setDAC(value);
         break;
       }
-
       case KEY_ON_OFF: {
         this.setKeyOnOff(value);
         break;
       }
-
       case TIMERS_AND_CHANNEL_3_6_MODE: {
         this.setTimersAndChannel3_6Mode(value);
         break;
       }
-
       case LFO_ENABLE: {
         this.setLFO(value);
         break;
       }
-
-      // Channel 0
-
       case CHANNEL_0_OPERATOR_0_DETUNE_MULTIPLE: {
-        this.channels.get(Integer.valueOf(0))
-          .operators.get(Integer.valueOf(0))
-          .setDetuneAndMultiple(value);
+        this.channel(0).operator(0).setDetuneAndMultiple(value);
         break;
       }
-
       case CHANNEL_0_OPERATOR_1_DETUNE_MULTIPLE: {
-        this.channels.get(Integer.valueOf(0))
-          .operators.get(Integer.valueOf(1))
-          .setDetuneAndMultiple(value);
+        this.channel(0).operator(1).setDetuneAndMultiple(value);
         break;
       }
-
       case CHANNEL_0_OPERATOR_2_DETUNE_MULTIPLE: {
-        this.channels.get(Integer.valueOf(0))
-          .operators.get(Integer.valueOf(2))
-          .setDetuneAndMultiple(value);
+        this.channel(0).operator(2).setDetuneAndMultiple(value);
         break;
       }
-
       case CHANNEL_0_OPERATOR_3_DETUNE_MULTIPLE: {
-        this.channels.get(Integer.valueOf(0))
-          .operators.get(Integer.valueOf(3))
-          .setDetuneAndMultiple(value);
+        this.channel(0).operator(3).setDetuneAndMultiple(value);
         break;
       }
-
       case CHANNEL_0_OPERATOR_0_VOLUME_INVERSE: {
-        this.channels.get(Integer.valueOf(0))
-          .operators.get(Integer.valueOf(0))
-          .setVolumeInverse(value);
+        this.channel(0).operator(0).setVolumeInverse(value);
         break;
       }
-
       case CHANNEL_0_OPERATOR_1_VOLUME_INVERSE: {
-        this.channels.get(Integer.valueOf(0))
-          .operators.get(Integer.valueOf(1))
-          .setVolumeInverse(value);
+        this.channel(0).operator(1).setVolumeInverse(value);
         break;
       }
-
       case CHANNEL_0_OPERATOR_2_VOLUME_INVERSE: {
-        this.channels.get(Integer.valueOf(0))
-          .operators.get(Integer.valueOf(2))
-          .setVolumeInverse(value);
+        this.channel(0).operator(2).setVolumeInverse(value);
         break;
       }
-
       case CHANNEL_0_OPERATOR_3_VOLUME_INVERSE: {
-        this.channels.get(Integer.valueOf(0))
-          .operators.get(Integer.valueOf(3))
-          .setVolumeInverse(value);
+        this.channel(0).operator(3).setVolumeInverse(value);
         break;
       }
-
       case CHANNEL_0_OPERATOR_0_RATE_SCALING_AND_ATTACK_RATE: {
-        this.channels.get(Integer.valueOf(0))
-          .operators.get(Integer.valueOf(0))
-          .setRateScalingAndAttackRate(value);
+        this.channel(0).operator(0).setRateScalingAndAttackRate(value);
         break;
       }
-
       case CHANNEL_0_OPERATOR_1_RATE_SCALING_AND_ATTACK_RATE: {
-        this.channels.get(Integer.valueOf(0))
-          .operators.get(Integer.valueOf(1))
-          .setRateScalingAndAttackRate(value);
+        this.channel(0).operator(1).setRateScalingAndAttackRate(value);
         break;
       }
-
       case CHANNEL_0_OPERATOR_2_RATE_SCALING_AND_ATTACK_RATE: {
-        this.channels.get(Integer.valueOf(0))
-          .operators.get(Integer.valueOf(2))
-          .setRateScalingAndAttackRate(value);
+        this.channel(0).operator(2).setRateScalingAndAttackRate(value);
         break;
       }
-
       case CHANNEL_0_OPERATOR_3_RATE_SCALING_AND_ATTACK_RATE: {
-        this.channels.get(Integer.valueOf(0))
-          .operators.get(Integer.valueOf(3))
-          .setRateScalingAndAttackRate(value);
+        this.channel(0).operator(3).setRateScalingAndAttackRate(value);
         break;
       }
-
       case CHANNEL_0_OPERATOR_0_RATE_DECAY_AND_AMPLITUDE_MODULATION: {
-        this.channels.get(Integer.valueOf(0))
-          .operators.get(Integer.valueOf(0))
-          .setRateDecayAndAmplitudeModulation(value);
+        this.channel(0).operator(0).setRateDecayAndAmplitudeModulation(value);
         break;
       }
-
       case CHANNEL_0_OPERATOR_1_RATE_DECAY_AND_AMPLITUDE_MODULATION: {
-        this.channels.get(Integer.valueOf(0))
-          .operators.get(Integer.valueOf(1))
-          .setRateDecayAndAmplitudeModulation(value);
+        this.channel(0).operator(1).setRateDecayAndAmplitudeModulation(value);
         break;
       }
-
       case CHANNEL_0_OPERATOR_2_RATE_DECAY_AND_AMPLITUDE_MODULATION: {
-        this.channels.get(Integer.valueOf(0))
-          .operators.get(Integer.valueOf(2))
-          .setRateDecayAndAmplitudeModulation(value);
+        this.channel(0).operator(2).setRateDecayAndAmplitudeModulation(value);
         break;
       }
-
       case CHANNEL_0_OPERATOR_3_RATE_DECAY_AND_AMPLITUDE_MODULATION: {
-        this.channels.get(Integer.valueOf(0))
-          .operators.get(Integer.valueOf(3))
-          .setRateDecayAndAmplitudeModulation(value);
+        this.channel(0).operator(3).setRateDecayAndAmplitudeModulation(value);
         break;
       }
-
       case CHANNEL_0_OPERATOR_0_RATE_DECAY_SECONDARY: {
-        this.channels.get(Integer.valueOf(0))
-          .operators.get(Integer.valueOf(0))
-          .setRateDecaySecondary(value);
+        this.channel(0).operator(0).setRateDecaySecondary(value);
         break;
       }
-
       case CHANNEL_0_OPERATOR_1_RATE_DECAY_SECONDARY: {
-        this.channels.get(Integer.valueOf(0))
-          .operators.get(Integer.valueOf(1))
-          .setRateDecaySecondary(value);
+        this.channel(0).operator(1).setRateDecaySecondary(value);
         break;
       }
-
       case CHANNEL_0_OPERATOR_2_RATE_DECAY_SECONDARY: {
-        this.channels.get(Integer.valueOf(0))
-          .operators.get(Integer.valueOf(2))
-          .setRateDecaySecondary(value);
+        this.channel(0).operator(2).setRateDecaySecondary(value);
         break;
       }
-
       case CHANNEL_0_OPERATOR_3_RATE_DECAY_SECONDARY: {
-        this.channels.get(Integer.valueOf(0))
-          .operators.get(Integer.valueOf(3))
-          .setRateDecaySecondary(value);
+        this.channel(0).operator(3).setRateDecaySecondary(value);
         break;
       }
-
       case CHANNEL_0_OPERATOR_0_RATE_RELEASE_SECONDARY_AMPLITUDE: {
-        this.channels.get(Integer.valueOf(0))
-          .operators.get(Integer.valueOf(0))
-          .setRateReleaseAndSecondaryAmplitude(value);
+        this.channel(0).operator(0).setRateReleaseAndSecondaryAmplitude(value);
         break;
       }
-
       case CHANNEL_0_OPERATOR_1_RATE_RELEASE_SECONDARY_AMPLITUDE: {
-        this.channels.get(Integer.valueOf(0))
-          .operators.get(Integer.valueOf(1))
-          .setRateReleaseAndSecondaryAmplitude(value);
+        this.channel(0).operator(1).setRateReleaseAndSecondaryAmplitude(value);
         break;
       }
-
       case CHANNEL_0_OPERATOR_2_RATE_RELEASE_SECONDARY_AMPLITUDE: {
-        this.channels.get(Integer.valueOf(0))
-          .operators.get(Integer.valueOf(2))
-          .setRateReleaseAndSecondaryAmplitude(value);
+        this.channel(0).operator(2).setRateReleaseAndSecondaryAmplitude(value);
         break;
       }
-
       case CHANNEL_0_OPERATOR_3_RATE_RELEASE_SECONDARY_AMPLITUDE: {
-        this.channels.get(Integer.valueOf(0))
-          .operators.get(Integer.valueOf(3))
-          .setRateReleaseAndSecondaryAmplitude(value);
+        this.channel(0).operator(3).setRateReleaseAndSecondaryAmplitude(value);
         break;
       }
-
-      // Channel 1
-
       case CHANNEL_1_OPERATOR_0_DETUNE_MULTIPLE: {
-        this.channels.get(Integer.valueOf(1))
-          .operators.get(Integer.valueOf(0))
-          .setDetuneAndMultiple(value);
+        this.channel(1).operator(0).setDetuneAndMultiple(value);
         break;
       }
-
       case CHANNEL_1_OPERATOR_1_DETUNE_MULTIPLE: {
-        this.channels.get(Integer.valueOf(1))
-          .operators.get(Integer.valueOf(1))
-          .setDetuneAndMultiple(value);
+        this.channel(1).operator(1).setDetuneAndMultiple(value);
         break;
       }
-
       case CHANNEL_1_OPERATOR_2_DETUNE_MULTIPLE: {
-        this.channels.get(Integer.valueOf(1))
-          .operators.get(Integer.valueOf(2))
-          .setDetuneAndMultiple(value);
+        this.channel(1).operator(2).setDetuneAndMultiple(value);
         break;
       }
-
       case CHANNEL_1_OPERATOR_3_DETUNE_MULTIPLE: {
-        this.channels.get(Integer.valueOf(1))
-          .operators.get(Integer.valueOf(3))
-          .setDetuneAndMultiple(value);
+        this.channel(1).operator(3).setDetuneAndMultiple(value);
         break;
       }
-
       case CHANNEL_1_OPERATOR_0_VOLUME_INVERSE: {
-        this.channels.get(Integer.valueOf(1))
-          .operators.get(Integer.valueOf(0))
-          .setVolumeInverse(value);
+        this.channel(1).operator(0).setVolumeInverse(value);
         break;
       }
-
       case CHANNEL_1_OPERATOR_1_VOLUME_INVERSE: {
-        this.channels.get(Integer.valueOf(1))
-          .operators.get(Integer.valueOf(1))
-          .setVolumeInverse(value);
+        this.channel(1).operator(1).setVolumeInverse(value);
         break;
       }
-
       case CHANNEL_1_OPERATOR_2_VOLUME_INVERSE: {
-        this.channels.get(Integer.valueOf(1))
-          .operators.get(Integer.valueOf(2))
-          .setVolumeInverse(value);
+        this.channel(1).operator(2).setVolumeInverse(value);
         break;
       }
-
       case CHANNEL_1_OPERATOR_3_VOLUME_INVERSE: {
-        this.channels.get(Integer.valueOf(1))
-          .operators.get(Integer.valueOf(3))
-          .setVolumeInverse(value);
+        this.channel(1).operator(3).setVolumeInverse(value);
         break;
       }
-
       case CHANNEL_1_OPERATOR_0_RATE_SCALING_AND_ATTACK_RATE: {
-        this.channels.get(Integer.valueOf(1))
-          .operators.get(Integer.valueOf(0))
-          .setRateScalingAndAttackRate(value);
+        this.channel(1).operator(0).setRateScalingAndAttackRate(value);
         break;
       }
-
       case CHANNEL_1_OPERATOR_1_RATE_SCALING_AND_ATTACK_RATE: {
-        this.channels.get(Integer.valueOf(1))
-          .operators.get(Integer.valueOf(1))
-          .setRateScalingAndAttackRate(value);
+        this.channel(1).operator(1).setRateScalingAndAttackRate(value);
         break;
       }
-
       case CHANNEL_1_OPERATOR_2_RATE_SCALING_AND_ATTACK_RATE: {
-        this.channels.get(Integer.valueOf(1))
-          .operators.get(Integer.valueOf(2))
-          .setRateScalingAndAttackRate(value);
+        this.channel(1).operator(2).setRateScalingAndAttackRate(value);
         break;
       }
-
       case CHANNEL_1_OPERATOR_3_RATE_SCALING_AND_ATTACK_RATE: {
-        this.channels.get(Integer.valueOf(1))
-          .operators.get(Integer.valueOf(3))
-          .setRateScalingAndAttackRate(value);
+        this.channel(1).operator(3).setRateScalingAndAttackRate(value);
         break;
       }
-
       case CHANNEL_1_OPERATOR_0_RATE_DECAY_AND_AMPLITUDE_MODULATION: {
-        this.channels.get(Integer.valueOf(1))
-          .operators.get(Integer.valueOf(0))
-          .setRateDecayAndAmplitudeModulation(value);
+        this.channel(1).operator(0).setRateDecayAndAmplitudeModulation(value);
         break;
       }
-
       case CHANNEL_1_OPERATOR_1_RATE_DECAY_AND_AMPLITUDE_MODULATION: {
-        this.channels.get(Integer.valueOf(1))
-          .operators.get(Integer.valueOf(1))
-          .setRateDecayAndAmplitudeModulation(value);
+        this.channel(1).operator(1).setRateDecayAndAmplitudeModulation(value);
         break;
       }
-
       case CHANNEL_1_OPERATOR_2_RATE_DECAY_AND_AMPLITUDE_MODULATION: {
-        this.channels.get(Integer.valueOf(1))
-          .operators.get(Integer.valueOf(2))
-          .setRateDecayAndAmplitudeModulation(value);
+        this.channel(1).operator(2).setRateDecayAndAmplitudeModulation(value);
         break;
       }
-
       case CHANNEL_1_OPERATOR_3_RATE_DECAY_AND_AMPLITUDE_MODULATION: {
-        this.channels.get(Integer.valueOf(1))
-          .operators.get(Integer.valueOf(3))
-          .setRateDecayAndAmplitudeModulation(value);
+        this.channel(1).operator(3).setRateDecayAndAmplitudeModulation(value);
         break;
       }
-
       case CHANNEL_1_OPERATOR_0_RATE_DECAY_SECONDARY: {
-        this.channels.get(Integer.valueOf(1))
-          .operators.get(Integer.valueOf(0))
-          .setRateDecaySecondary(value);
+        this.channel(1).operator(0).setRateDecaySecondary(value);
         break;
       }
-
       case CHANNEL_1_OPERATOR_1_RATE_DECAY_SECONDARY: {
-        this.channels.get(Integer.valueOf(1))
-          .operators.get(Integer.valueOf(1))
-          .setRateDecaySecondary(value);
+        this.channel(1).operator(1).setRateDecaySecondary(value);
         break;
       }
-
       case CHANNEL_1_OPERATOR_2_RATE_DECAY_SECONDARY: {
-        this.channels.get(Integer.valueOf(1))
-          .operators.get(Integer.valueOf(2))
-          .setRateDecaySecondary(value);
+        this.channel(1).operator(2).setRateDecaySecondary(value);
         break;
       }
-
       case CHANNEL_1_OPERATOR_3_RATE_DECAY_SECONDARY: {
-        this.channels.get(Integer.valueOf(1))
-          .operators.get(Integer.valueOf(3))
-          .setRateDecaySecondary(value);
+        this.channel(1).operator(3).setRateDecaySecondary(value);
         break;
       }
-
       case CHANNEL_1_OPERATOR_0_RATE_RELEASE_SECONDARY_AMPLITUDE: {
-        this.channels.get(Integer.valueOf(1))
-          .operators.get(Integer.valueOf(0))
-          .setRateReleaseAndSecondaryAmplitude(value);
+        this.channel(1).operator(0).setRateReleaseAndSecondaryAmplitude(value);
         break;
       }
-
       case CHANNEL_1_OPERATOR_1_RATE_RELEASE_SECONDARY_AMPLITUDE: {
-        this.channels.get(Integer.valueOf(1))
-          .operators.get(Integer.valueOf(1))
-          .setRateReleaseAndSecondaryAmplitude(value);
+        this.channel(1).operator(1).setRateReleaseAndSecondaryAmplitude(value);
         break;
       }
-
       case CHANNEL_1_OPERATOR_2_RATE_RELEASE_SECONDARY_AMPLITUDE: {
-        this.channels.get(Integer.valueOf(1))
-          .operators.get(Integer.valueOf(2))
-          .setRateReleaseAndSecondaryAmplitude(value);
+        this.channel(1).operator(2).setRateReleaseAndSecondaryAmplitude(value);
         break;
       }
-
       case CHANNEL_1_OPERATOR_3_RATE_RELEASE_SECONDARY_AMPLITUDE: {
-        this.channels.get(Integer.valueOf(1))
-          .operators.get(Integer.valueOf(3))
-          .setRateReleaseAndSecondaryAmplitude(value);
+        this.channel(1).operator(3).setRateReleaseAndSecondaryAmplitude(value);
         break;
       }
-
-      // Channel 2
-
       case CHANNEL_2_OPERATOR_0_DETUNE_MULTIPLE: {
-        this.channels.get(Integer.valueOf(2))
-          .operators.get(Integer.valueOf(0))
-          .setDetuneAndMultiple(value);
+        this.channel(2).operator(0).setDetuneAndMultiple(value);
         break;
       }
-
       case CHANNEL_2_OPERATOR_1_DETUNE_MULTIPLE: {
-        this.channels.get(Integer.valueOf(2))
-          .operators.get(Integer.valueOf(1))
-          .setDetuneAndMultiple(value);
+        this.channel(2).operator(1).setDetuneAndMultiple(value);
         break;
       }
-
       case CHANNEL_2_OPERATOR_2_DETUNE_MULTIPLE: {
-        this.channels.get(Integer.valueOf(2))
-          .operators.get(Integer.valueOf(2))
-          .setDetuneAndMultiple(value);
+        this.channel(2).operator(2).setDetuneAndMultiple(value);
         break;
       }
-
       case CHANNEL_2_OPERATOR_3_DETUNE_MULTIPLE: {
-        this.channels.get(Integer.valueOf(2))
-          .operators.get(Integer.valueOf(3))
-          .setDetuneAndMultiple(value);
+        this.channel(2).operator(3).setDetuneAndMultiple(value);
         break;
       }
-
       case CHANNEL_2_OPERATOR_0_VOLUME_INVERSE: {
-        this.channels.get(Integer.valueOf(2))
-          .operators.get(Integer.valueOf(0))
-          .setVolumeInverse(value);
+        this.channel(2).operator(0).setVolumeInverse(value);
         break;
       }
-
       case CHANNEL_2_OPERATOR_1_VOLUME_INVERSE: {
-        this.channels.get(Integer.valueOf(2))
-          .operators.get(Integer.valueOf(1))
-          .setVolumeInverse(value);
+        this.channel(2).operator(1).setVolumeInverse(value);
         break;
       }
-
       case CHANNEL_2_OPERATOR_2_VOLUME_INVERSE: {
-        this.channels.get(Integer.valueOf(2))
-          .operators.get(Integer.valueOf(2))
-          .setVolumeInverse(value);
+        this.channel(2).operator(2).setVolumeInverse(value);
         break;
       }
-
       case CHANNEL_2_OPERATOR_3_VOLUME_INVERSE: {
-        this.channels.get(Integer.valueOf(2))
-          .operators.get(Integer.valueOf(3))
-          .setVolumeInverse(value);
+        this.channel(2).operator(3).setVolumeInverse(value);
         break;
       }
-
       case CHANNEL_2_OPERATOR_0_RATE_SCALING_AND_ATTACK_RATE: {
-        this.channels.get(Integer.valueOf(2))
-          .operators.get(Integer.valueOf(0))
-          .setRateScalingAndAttackRate(value);
+        this.channel(2).operator(0).setRateScalingAndAttackRate(value);
         break;
       }
-
       case CHANNEL_2_OPERATOR_1_RATE_SCALING_AND_ATTACK_RATE: {
-        this.channels.get(Integer.valueOf(2))
-          .operators.get(Integer.valueOf(1))
-          .setRateScalingAndAttackRate(value);
+        this.channel(2).operator(1).setRateScalingAndAttackRate(value);
         break;
       }
-
       case CHANNEL_2_OPERATOR_2_RATE_SCALING_AND_ATTACK_RATE: {
-        this.channels.get(Integer.valueOf(2))
-          .operators.get(Integer.valueOf(2))
-          .setRateScalingAndAttackRate(value);
+        this.channel(2).operator(2).setRateScalingAndAttackRate(value);
         break;
       }
-
       case CHANNEL_2_OPERATOR_3_RATE_SCALING_AND_ATTACK_RATE: {
-        this.channels.get(Integer.valueOf(2))
-          .operators.get(Integer.valueOf(3))
-          .setRateScalingAndAttackRate(value);
+        this.channel(2).operator(3).setRateScalingAndAttackRate(value);
         break;
       }
-
       case CHANNEL_2_OPERATOR_0_RATE_DECAY_AND_AMPLITUDE_MODULATION: {
-        this.channels.get(Integer.valueOf(2))
-          .operators.get(Integer.valueOf(0))
-          .setRateDecayAndAmplitudeModulation(value);
+        this.channel(2).operator(0).setRateDecayAndAmplitudeModulation(value);
         break;
       }
-
       case CHANNEL_2_OPERATOR_1_RATE_DECAY_AND_AMPLITUDE_MODULATION: {
-        this.channels.get(Integer.valueOf(2))
-          .operators.get(Integer.valueOf(1))
-          .setRateDecayAndAmplitudeModulation(value);
+        this.channel(2).operator(1).setRateDecayAndAmplitudeModulation(value);
         break;
       }
-
       case CHANNEL_2_OPERATOR_2_RATE_DECAY_AND_AMPLITUDE_MODULATION: {
-        this.channels.get(Integer.valueOf(2))
-          .operators.get(Integer.valueOf(2))
-          .setRateDecayAndAmplitudeModulation(value);
+        this.channel(2).operator(2).setRateDecayAndAmplitudeModulation(value);
         break;
       }
-
       case CHANNEL_2_OPERATOR_3_RATE_DECAY_AND_AMPLITUDE_MODULATION: {
-        this.channels.get(Integer.valueOf(2))
-          .operators.get(Integer.valueOf(3))
-          .setRateDecayAndAmplitudeModulation(value);
+        this.channel(2).operator(3).setRateDecayAndAmplitudeModulation(value);
         break;
       }
-
       case CHANNEL_2_OPERATOR_0_RATE_DECAY_SECONDARY: {
-        this.channels.get(Integer.valueOf(2))
-          .operators.get(Integer.valueOf(0))
-          .setRateDecaySecondary(value);
+        this.channel(2).operator(0).setRateDecaySecondary(value);
         break;
       }
-
       case CHANNEL_2_OPERATOR_1_RATE_DECAY_SECONDARY: {
-        this.channels.get(Integer.valueOf(2))
-          .operators.get(Integer.valueOf(1))
-          .setRateDecaySecondary(value);
+        this.channel(2).operator(1).setRateDecaySecondary(value);
         break;
       }
-
       case CHANNEL_2_OPERATOR_2_RATE_DECAY_SECONDARY: {
-        this.channels.get(Integer.valueOf(2))
-          .operators.get(Integer.valueOf(2))
-          .setRateDecaySecondary(value);
+        this.channel(2).operator(2).setRateDecaySecondary(value);
         break;
       }
-
       case CHANNEL_2_OPERATOR_3_RATE_DECAY_SECONDARY: {
-        this.channels.get(Integer.valueOf(2))
-          .operators.get(Integer.valueOf(3))
-          .setRateDecaySecondary(value);
+        this.channel(2).operator(3).setRateDecaySecondary(value);
         break;
       }
-
       case CHANNEL_2_OPERATOR_0_RATE_RELEASE_SECONDARY_AMPLITUDE: {
-        this.channels.get(Integer.valueOf(2))
-          .operators.get(Integer.valueOf(0))
-          .setRateReleaseAndSecondaryAmplitude(value);
+        this.channel(2).operator(0).setRateReleaseAndSecondaryAmplitude(value);
         break;
       }
-
       case CHANNEL_2_OPERATOR_1_RATE_RELEASE_SECONDARY_AMPLITUDE: {
-        this.channels.get(Integer.valueOf(2))
-          .operators.get(Integer.valueOf(1))
-          .setRateReleaseAndSecondaryAmplitude(value);
+        this.channel(2).operator(1).setRateReleaseAndSecondaryAmplitude(value);
         break;
       }
-
       case CHANNEL_2_OPERATOR_2_RATE_RELEASE_SECONDARY_AMPLITUDE: {
-        this.channels.get(Integer.valueOf(2))
-          .operators.get(Integer.valueOf(2))
-          .setRateReleaseAndSecondaryAmplitude(value);
+        this.channel(2).operator(2).setRateReleaseAndSecondaryAmplitude(value);
         break;
       }
-
       case CHANNEL_2_OPERATOR_3_RATE_RELEASE_SECONDARY_AMPLITUDE: {
-        this.channels.get(Integer.valueOf(2))
-          .operators.get(Integer.valueOf(3))
-          .setRateReleaseAndSecondaryAmplitude(value);
+        this.channel(2).operator(3).setRateReleaseAndSecondaryAmplitude(value);
         break;
       }
 
@@ -1655,6 +1172,7 @@ public final class VGMInterpreterYM2612
       }
     }
   }
+  // CHECKSTYLE:ON
 
   private void setProprietaryRegister(
     final int register,
@@ -1691,21 +1209,21 @@ public final class VGMInterpreterYM2612
   private void setKeyOnOff(
     final int value)
   {
-    final Channel channel;
+    final VGMYM2612Channel channel;
     final int channel_index = value & 0b111;
     if (channel_index == 0b000) {
-      channel = this.channels.get(Integer.valueOf(0));
+      channel = this.channel(0);
     } else if (channel_index == 0b001) {
-      channel = this.channels.get(Integer.valueOf(1));
+      channel = this.channel(1);
     } else if (channel_index == 0b010) {
-      channel = this.channels.get(Integer.valueOf(2));
+      channel = this.channel(2);
       // This is not a typo: The operator numbering is discontinuous
     } else if (channel_index == 0b100) {
-      channel = this.channels.get(Integer.valueOf(3));
+      channel = this.channel(3);
     } else if (channel_index == 0b101) {
-      channel = this.channels.get(Integer.valueOf(4));
+      channel = this.channel(4);
     } else if (channel_index == 0b110) {
-      channel = this.channels.get(Integer.valueOf(5));
+      channel = this.channel(5);
     } else {
       LOG.warn(
         "setKeyOnOff: channel 0x{} is invalid",
@@ -1715,18 +1233,18 @@ public final class VGMInterpreterYM2612
 
     final int ops = (value >>> 4) & 0b1111;
     final boolean op_0 = (ops & 0b0001) == 0b0001;
-    channel.operators.get(Integer.valueOf(0)).enabled = op_0;
+    channel.operator(0).setEnabled(op_0);
     final boolean op_1 = (ops & 0b0010) == 0b0010;
-    channel.operators.get(Integer.valueOf(1)).enabled = op_1;
+    channel.operator(1).setEnabled(op_1);
     final boolean op_2 = (ops & 0b0100) == 0b0100;
-    channel.operators.get(Integer.valueOf(2)).enabled = op_2;
+    channel.operator(2).setEnabled(op_2);
     final boolean op_3 = (ops & 0b1000) == 0b1000;
-    channel.operators.get(Integer.valueOf(3)).enabled = op_3;
+    channel.operator(3).setEnabled(op_3);
 
     if (LOG.isTraceEnabled()) {
       LOG.trace(
         "setKeyOnOff: channel {} operators 0/1/2/3 ({}/{}/{}/{})",
-        Integer.valueOf(channel.index),
+        Integer.valueOf(channel.index()),
         Boolean.valueOf(op_0),
         Boolean.valueOf(op_1),
         Boolean.valueOf(op_2),
@@ -1800,252 +1318,6 @@ public final class VGMInterpreterYM2612
         "setLFO: enable {} frequency 0x{}",
         Boolean.valueOf(this.lfo_enable == 1),
         Integer.toUnsignedString(this.lfo_frequency, 16));
-    }
-  }
-
-  /**
-   * An operator.
-   */
-
-  public final class Operator
-  {
-    private Logger log;
-    private final int index;
-    private final Channel channel;
-    private int pitch_multiply;
-    private int pitch_detune;
-    private int volume;
-    private int rate_scale;
-    private int rate_attack;
-    private int amplitude_modulation_enabled;
-    private int rate_decay_0;
-    private int rate_decay_1;
-    private int amplitude_secondary;
-    private int rate_release;
-    private boolean enabled;
-    private int frequency_lsb;
-    private int frequency_msb;
-    private int frequency_octave;
-
-    Operator(
-      final Channel in_channel,
-      final int in_index)
-    {
-      this.channel = in_channel;
-      this.index = in_index;
-      this.log = LoggerFactory.getLogger(
-        new StringBuilder(128)
-          .append(VGMInterpreterYM2612.class.getCanonicalName())
-          .append(" [channel ")
-          .append(this.channel.index)
-          .append("] [operator ")
-          .append(in_index)
-          .append("]")
-          .toString());
-    }
-
-    void setDetuneAndMultiple(
-      final int value)
-    {
-      final int mult = value & 0b1111;
-      this.pitch_multiply = mult;
-      final int detune = (value >>> 4) & 0b111;
-      this.pitch_detune = detune;
-
-      if (this.log.isTraceEnabled()) {
-        this.log.trace(
-          "setDetuneAndMultiple: multiply {} detune {}",
-          Integer.valueOf(this.pitch_multiply),
-          Integer.valueOf(this.pitch_detune));
-      }
-    }
-
-    void setVolumeInverse(
-      final int value)
-    {
-      this.volume = value;
-
-      if (this.log.isTraceEnabled()) {
-        this.log.trace(
-          "setVolumeInverse: 0x{}",
-          Integer.toUnsignedString(this.volume, 16));
-      }
-    }
-
-    void setRateScalingAndAttackRate(
-      final int value)
-    {
-      this.rate_scale = (value >>> 6) & 0b11;
-      this.rate_attack = value & 0b11111;
-
-      if (this.log.isTraceEnabled()) {
-        this.log.trace(
-          "setRateScalingAndAttackRate: scale {} attack {}",
-          Integer.valueOf(this.rate_scale),
-          Integer.valueOf(this.rate_attack));
-      }
-    }
-
-    void setRateDecayAndAmplitudeModulation(
-      final int value)
-    {
-      this.amplitude_modulation_enabled = (value >>> 7) & 0b1;
-      this.rate_decay_0 = value & 0b11111;
-
-      if (this.log.isTraceEnabled()) {
-        this.log.trace(
-          "setRateDecayAndAmplitudeModulation: amp-mod {} decay-0 {}",
-          Integer.valueOf(this.amplitude_modulation_enabled),
-          Integer.valueOf(this.rate_decay_0));
-      }
-    }
-
-    void setRateDecaySecondary(
-      final int value)
-    {
-      this.rate_decay_1 = value & 0b11111;
-
-      if (this.log.isTraceEnabled()) {
-        this.log.trace(
-          "setRateDecaySecondary: decay-1 {}",
-          Integer.valueOf(this.rate_decay_1));
-      }
-    }
-
-    void setRateReleaseAndSecondaryAmplitude(
-      final int value)
-    {
-      this.amplitude_secondary = (value >>> 4) & 0b1111;
-      this.rate_release = value & 0b1111;
-
-      if (this.log.isTraceEnabled()) {
-        this.log.trace(
-          "setRateReleaseAndSecondaryAmplitude: amp-second {} release {}",
-          Integer.valueOf(this.amplitude_secondary),
-          Integer.valueOf(this.rate_release));
-      }
-    }
-
-    void setFrequencyLSB(
-      final int value)
-    {
-      this.frequency_lsb = value;
-
-      if (this.log.isTraceEnabled()) {
-        this.log.trace(
-          "setFrequencyLSB: (special mode) lsb 0x{}",
-          Integer.toUnsignedString(value, 16));
-      }
-    }
-
-    void setFrequencyMSB(
-      final int value)
-    {
-      this.frequency_msb = value & 0b111;
-      this.frequency_octave = (value >>> 3) & 0b111;
-
-      if (this.log.isTraceEnabled()) {
-        this.log.trace(
-          "setFrequencyMSB: (special mode) msb 0x{} octave {}",
-          Integer.toUnsignedString(value, 16),
-          Integer.valueOf(this.frequency_octave));
-      }
-    }
-  }
-
-  /**
-   * A channel.
-   */
-
-  public final class Channel
-  {
-    private final int index;
-    private final HashMap<Integer, Operator> operators;
-    private final Logger log;
-    private int frequency_lsb;
-    private int frequency_msb;
-    private int frequency_octave;
-    private int feedback;
-    private int algorithm;
-    private boolean stereo_left_enabled;
-    private boolean stereo_right_enabled;
-    private int lfo_amplitude_sensitivity;
-    private int lfo_frequency_sensitivity;
-
-    Channel(
-      final int in_index)
-    {
-      this.index = in_index;
-      this.operators = new HashMap<>(6);
-      for (int op_index = 0; op_index < 4; ++op_index) {
-        this.operators.put(
-          Integer.valueOf(op_index), new Operator(this, op_index));
-      }
-
-      this.log = LoggerFactory.getLogger(
-        new StringBuilder(128)
-          .append(VGMInterpreterYM2612.class.getCanonicalName())
-          .append(" [channel ")
-          .append(this.index)
-          .append("]")
-          .toString());
-    }
-
-    void setFrequencyLSB(final int value)
-    {
-      this.frequency_lsb = value;
-
-      if (this.log.isTraceEnabled()) {
-        this.log.trace(
-          "setFrequencyLSB: lsb 0x{}",
-          Integer.toUnsignedString(value, 16));
-      }
-    }
-
-    void setFrequencyMSB(
-      final int value)
-    {
-      this.frequency_msb = value & 0b111;
-      this.frequency_octave = (value >>> 3) & 0b111;
-
-      if (this.log.isTraceEnabled()) {
-        this.log.trace(
-          "setFrequencyMSB: msb 0x{} octave {}",
-          Integer.toUnsignedString(value, 16),
-          Integer.valueOf(this.frequency_octave));
-      }
-    }
-
-    void setAlgorithmAndFeedback(
-      final int value)
-    {
-      this.feedback = (value >>> 3) & 0b111;
-      this.algorithm = value & 0b111;
-
-      if (this.log.isTraceEnabled()) {
-        this.log.trace(
-          "setAlgorithmAndFeedback: feedback {} algorithm {}",
-          Integer.valueOf(this.feedback),
-          Integer.valueOf(this.algorithm));
-      }
-    }
-
-    void setStereoAndLFOSensitivity(
-      final int value)
-    {
-      this.stereo_left_enabled = ((value >>> 7) & 0b1) == 0b1;
-      this.stereo_right_enabled = ((value >>> 6) & 0b1) == 0b1;
-      this.lfo_amplitude_sensitivity = (value >>> 3) & 0b111;
-      this.lfo_frequency_sensitivity = value & 0b11;
-
-      if (this.log.isTraceEnabled()) {
-        this.log.trace(
-          "setStereoAndLFOSensitivity: L/R ({}/{}) amp-sensitivity {} freq-sensitivity {}",
-          Boolean.valueOf(this.stereo_left_enabled),
-          Boolean.valueOf(this.stereo_right_enabled),
-          Integer.valueOf(this.lfo_amplitude_sensitivity),
-          Integer.valueOf(this.lfo_frequency_sensitivity));
-      }
     }
   }
 }

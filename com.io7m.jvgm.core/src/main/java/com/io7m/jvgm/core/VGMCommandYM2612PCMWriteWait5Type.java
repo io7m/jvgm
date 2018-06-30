@@ -16,13 +16,14 @@
 
 package com.io7m.jvgm.core;
 
+import com.io7m.immutables.styles.ImmutablesStyleType;
 import org.immutables.value.Value;
 
 /**
  * Write PCM data and then wait for a fixed number of samples.
  */
 
-@VGMImmutableStyleType
+@ImmutablesStyleType
 @Value.Immutable
 public interface VGMCommandYM2612PCMWriteWait5Type
   extends VGMCommandYM2612PCMWriteWaitType

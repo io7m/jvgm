@@ -94,6 +94,7 @@ public interface VGMCommandType
      * @return The type associated with the given tag
      */
 
+    // CHECKSTYLE:OFF
     public static Type ofInt(
       final int t)
     {
@@ -191,6 +192,7 @@ public interface VGMCommandType
         }
       }
     }
+    // CHECKSTYLE:ON
 
     /**
      * @return The numeric tag for the command

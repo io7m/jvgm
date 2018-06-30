@@ -16,7 +16,7 @@
 
 package com.io7m.jvgm.parser.api;
 
-import com.io7m.jvgm.core.VGMImmutableStyleType;
+import com.io7m.immutables.styles.ImmutablesStyleType;
 import org.immutables.value.Value;
 
 import java.nio.file.Path;
@@ -26,7 +26,7 @@ import java.util.Optional;
  * The type of parse errors.
  */
 
-@VGMImmutableStyleType
+@ImmutablesStyleType
 @Value.Immutable
 public interface VGMParseErrorType
 {

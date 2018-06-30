@@ -1,0 +1,122 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<FindBugsFilter xmlns="https://github.com/spotbugs/filter/3.0.0">
+
+  <Match>
+    <Or>
+      <Class name="~com\.io7m\.jvgm\.core\..+\$InitShim"/>
+      <Class name="~com\.io7m\.jvgm\.core\..+\$Builder"/>
+
+      <Class name="com.io7m.jvgm.core.VGMCommandDataBlock"/>
+      <Class name="com.io7m.jvgm.core.VGMCommandEndOfSoundData"/>
+      <Class name="com.io7m.jvgm.core.VGMCommandEOF"/>
+      <Class name="com.io7m.jvgm.core.VGMCommandGameGearPSGStereoWrite"/>
+      <Class name="com.io7m.jvgm.core.VGMCommandPSGWrite"/>
+      <Class name="com.io7m.jvgm.core.VGMCommandWait735"/>
+      <Class name="com.io7m.jvgm.core.VGMCommandWait882"/>
+      <Class name="com.io7m.jvgm.core.VGMCommandWaitLong"/>
+      <Class name="com.io7m.jvgm.core.VGMCommandWaitShort0"/>
+      <Class name="com.io7m.jvgm.core.VGMCommandWaitShort1"/>
+      <Class name="com.io7m.jvgm.core.VGMCommandWaitShort2"/>
+      <Class name="com.io7m.jvgm.core.VGMCommandWaitShort3"/>
+      <Class name="com.io7m.jvgm.core.VGMCommandWaitShort4"/>
+      <Class name="com.io7m.jvgm.core.VGMCommandWaitShort5"/>
+      <Class name="com.io7m.jvgm.core.VGMCommandWaitShort6"/>
+      <Class name="com.io7m.jvgm.core.VGMCommandWaitShort7"/>
+      <Class name="com.io7m.jvgm.core.VGMCommandWaitShort8"/>
+      <Class name="com.io7m.jvgm.core.VGMCommandWaitShort9"/>
+      <Class name="com.io7m.jvgm.core.VGMCommandWaitShortA"/>
+      <Class name="com.io7m.jvgm.core.VGMCommandWaitShortB"/>
+      <Class name="com.io7m.jvgm.core.VGMCommandWaitShortC"/>
+      <Class name="com.io7m.jvgm.core.VGMCommandWaitShortD"/>
+      <Class name="com.io7m.jvgm.core.VGMCommandWaitShortE"/>
+      <Class name="com.io7m.jvgm.core.VGMCommandWaitShortF"/>
+      <Class name="com.io7m.jvgm.core.VGMCommandYM2413Write"/>
+      <Class name="com.io7m.jvgm.core.VGMCommandYM2612PCMWriteWait0"/>
+      <Class name="com.io7m.jvgm.core.VGMCommandYM2612PCMWriteWait1"/>
+      <Class name="com.io7m.jvgm.core.VGMCommandYM2612PCMWriteWait2"/>
+      <Class name="com.io7m.jvgm.core.VGMCommandYM2612PCMWriteWait3"/>
+      <Class name="com.io7m.jvgm.core.VGMCommandYM2612PCMWriteWait4"/>
+      <Class name="com.io7m.jvgm.core.VGMCommandYM2612PCMWriteWait5"/>
+      <Class name="com.io7m.jvgm.core.VGMCommandYM2612PCMWriteWait6"/>
+      <Class name="com.io7m.jvgm.core.VGMCommandYM2612PCMWriteWait7"/>
+      <Class name="com.io7m.jvgm.core.VGMCommandYM2612PCMWriteWait8"/>
+      <Class name="com.io7m.jvgm.core.VGMCommandYM2612PCMWriteWait9"/>
+      <Class name="com.io7m.jvgm.core.VGMCommandYM2612PCMWriteWaitA"/>
+      <Class name="com.io7m.jvgm.core.VGMCommandYM2612PCMWriteWaitB"/>
+      <Class name="com.io7m.jvgm.core.VGMCommandYM2612PCMWriteWaitC"/>
+      <Class name="com.io7m.jvgm.core.VGMCommandYM2612PCMWriteWaitD"/>
+      <Class name="com.io7m.jvgm.core.VGMCommandYM2612PCMWriteWaitE"/>
+      <Class name="com.io7m.jvgm.core.VGMCommandYM2612PCMWriteWaitF"/>
+      <Class name="com.io7m.jvgm.core.VGMCommandYM2612SeekPCM"/>
+      <Class name="com.io7m.jvgm.core.VGMCommandYM2612WritePort0"/>
+      <Class name="com.io7m.jvgm.core.VGMCommandYM2612WritePort1"/>
+      <Class name="com.io7m.jvgm.core.VGMHeader"/>
+      <Class name="com.io7m.jvgm.core.VGMVersion"/>
+
+      <Class name="com.io7m.jvgm.parser.api.VGMParseError"/>
+    </Or>
+  </Match>
+
+  <!-- False positive -->
+  <Match>
+    <Bug pattern="EXS_EXCEPTION_SOFTENING_NO_CHECKED"/>
+    <Class name="com.io7m.jvgm.parser.vanilla.VGMParserVanillaBody"/>
+    <Method name="parse"/>
+  </Match>
+
+  <!-- Not a problem -->
+  <Match>
+    <Bug pattern="SR_NOT_CHECKED"/>
+    <Class name="com.io7m.jvgm.parser.vanilla.VGMParserVanillaBody"/>
+    <Method name="parse"/>
+  </Match>
+
+  <!-- Not a problem -->
+  <Match>
+    <Bug pattern="SR_NOT_CHECKED"/>
+    <Class name="com.io7m.jvgm.parser.vanilla.VGMParserVanillaHeader"/>
+    <Method name="parseHeaderVersioned"/>
+  </Match>
+
+  <!-- Unavoidable weak messages -->
+  <Match>
+    <Bug pattern="WEM_WEAK_EXCEPTION_MESSAGING"/>
+    <Package name="com.io7m.jvgm.parser.vanilla"/>
+  </Match>
+
+  <!-- Unread fields? -->
+  <Match>
+    <Package name="com.io7m.jvgm.interpreter.ym2612"/>
+    <Or>
+      <Bug pattern="FCBL_FIELD_COULD_BE_LOCAL"/>
+      <Bug pattern="URF_UNREAD_FIELD"/>
+    </Or>
+  </Match>
+
+  <!-- Cannot do anything to simplify a switch-based interpreter -->
+  <Match>
+    <Class name="com.io7m.jvgm.interpreter.ym2612.VGMYM2612Interpreter"/>
+    <Bug pattern="CC_CYCLOMATIC_COMPLEXITY"/>
+  </Match>
+
+  <!-- Cannot do anything to simplify a switch-based interpreter -->
+  <Match>
+    <Package name="com.io7m.jvgm.parser.vanilla"/>
+    <Bug pattern="CC_CYCLOMATIC_COMPLEXITY"/>
+  </Match>
+
+  <!-- Noone cares about circular dependencies -->
+  <Match>
+    <Package name="com.io7m.jvgm.interpreter.ym2612"/>
+    <Bug pattern="FCCD_FIND_CLASS_CIRCULAR_DEPENDENCY"/>
+  </Match>
+
+  <Match>
+    <Or>
+      <Bug pattern="IMC_IMMATURE_CLASS_NO_TOSTRING"/>
+      <Bug pattern="OPM_OVERLY_PERMISSIVE_METHOD"/>
+      <Bug pattern="CRLF_INJECTION_LOGS"/>
+    </Or>
+  </Match>
+
+</FindBugsFilter>

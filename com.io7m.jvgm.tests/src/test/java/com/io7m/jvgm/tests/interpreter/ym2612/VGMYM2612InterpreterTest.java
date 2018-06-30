@@ -14,17 +14,34 @@
  * IN CONNECTION WITH THE USE OR PERFORMANCE OF THIS SOFTWARE.
  */
 
-package com.io7m.jvgm.checkstyle;
+package com.io7m.jvgm.tests.interpreter.ym2612;
 
-/**
- * Marker class for looking up files by resource.
- */
+import com.io7m.jvgm.interpreter.ym2612.VGMYM2612Interpreter;
+import org.junit.jupiter.api.Test;
 
-public final class Checkstyle
+public final class VGMYM2612InterpreterTest
 {
-  private Checkstyle()
+  @Test
+  public void testExhaustivePort0()
   {
-    throw new AssertionError("Unreachable code");
+    final VGMYM2612Interpreter interp = new VGMYM2612Interpreter();
+
+    for (int register = 0; register < 0x100; ++register) {
+      for (int value = 0; value < 0x100; ++value) {
+        interp.writeRegisterPort0(register, value);
+      }
+    }
+  }
+
+  @Test
+  public void testExhaustivePort1()
+  {
+    final VGMYM2612Interpreter interp = new VGMYM2612Interpreter();
+
+    for (int register = 0; register < 0x100; ++register) {
+      for (int value = 0; value < 0x100; ++value) {
+        interp.writeRegisterPort1(register, value);
+      }
+    }
   }
 }
-

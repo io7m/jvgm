@@ -16,7 +16,6 @@
 
 package com.io7m.jvgm.parser.vanilla;
 
-import com.io7m.jnull.NullCheck;
 import com.io7m.jvgm.core.VGMVersion;
 import com.io7m.jvgm.parser.api.VGMParserHeaderType;
 import com.io7m.jvgm.parser.api.VGMParserProviderType;
@@ -24,6 +23,7 @@ import io.vavr.collection.SortedSet;
 
 import java.io.InputStream;
 import java.nio.file.Path;
+import java.util.Objects;
 
 /**
  * The vanilla parser provider.
@@ -45,8 +45,8 @@ public final class VGMParserVanilla implements VGMParserProviderType
     final Path path,
     final InputStream stream)
   {
-    NullCheck.notNull(path, "Path");
-    NullCheck.notNull(stream, "Stream");
+    Objects.requireNonNull(path, "Path");
+    Objects.requireNonNull(stream, "Stream");
 
     return new VGMParserVanillaHeader(path, stream);
   }
