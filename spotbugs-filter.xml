@@ -53,6 +53,10 @@
       <Class name="com.io7m.jvgm.core.VGMHeader"/>
       <Class name="com.io7m.jvgm.core.VGMVersion"/>
 
+      <Class name="com.io7m.jvgm.interpreter.ym2612.VGMYM2612Callbacks"/>
+      <Class name="com.io7m.jvgm.interpreter.ym2612.VGMYM2612ChannelSnapshot"/>
+      <Class name="com.io7m.jvgm.interpreter.ym2612.VGMYM2612OperatorSnapshot"/>
+
       <Class name="com.io7m.jvgm.parser.api.VGMParseError"/>
     </Or>
   </Match>
@@ -132,6 +136,8 @@
       <Bug pattern="IMC_IMMATURE_CLASS_NO_TOSTRING"/>
       <Bug pattern="OPM_OVERLY_PERMISSIVE_METHOD"/>
       <Bug pattern="CRLF_INJECTION_LOGS"/>
+      <Bug pattern="CE_CLASS_ENVY"/>
+      <Bug pattern="OCP_OVERLY_CONCRETE_PARAMETER"/>
     </Or>
   </Match>
 

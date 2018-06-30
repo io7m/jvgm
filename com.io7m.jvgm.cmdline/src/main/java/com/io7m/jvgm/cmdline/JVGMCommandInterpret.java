@@ -22,7 +22,10 @@ import com.io7m.jvgm.core.VGMCommandType;
 import com.io7m.jvgm.core.VGMCommandYM2612WritePort0;
 import com.io7m.jvgm.core.VGMCommandYM2612WritePort1;
 import com.io7m.jvgm.core.VGMHeader;
+import com.io7m.jvgm.interpreter.ym2612.VGMYM2612Callbacks;
+import com.io7m.jvgm.interpreter.ym2612.VGMYM2612ChannelSnapshot;
 import com.io7m.jvgm.interpreter.ym2612.VGMYM2612Interpreter;
+import com.io7m.jvgm.interpreter.ym2612.VGMYM2612OperatorSnapshot;
 import com.io7m.jvgm.parser.api.VGMParseError;
 import com.io7m.jvgm.parser.api.VGMParserBodyType;
 import com.io7m.jvgm.parser.api.VGMParserHeaderType;
@@ -30,13 +33,18 @@ import com.io7m.jvgm.parser.vanilla.VGMParserVanilla;
 import io.vavr.Tuple2;
 import io.vavr.collection.Seq;
 import io.vavr.control.Validation;
+import org.apache.commons.lang3.mutable.MutableBoolean;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
+import java.io.BufferedWriter;
 import java.io.IOException;
 import java.io.InputStream;
 import java.nio.file.Files;
 import java.nio.file.Path;
+import java.util.HashMap;
+import java.util.Map;
+import java.util.Objects;
 import java.util.zip.GZIPInputStream;
 
 import static com.io7m.jvgm.cmdline.JVGMCommandType.Status.FAILURE;
@@ -65,6 +73,12 @@ public final class JVGMCommandInterpret extends JVGMCommandRoot
     required = false,
     description = "The input is gzip compressed")
   private boolean gzip;
+
+  @Parameter(
+    names = "--output",
+    required = true,
+    description = "The output directory")
+  private Path output_directory;
 
   /**
    * Construct a command.
@@ -145,10 +159,140 @@ public final class JVGMCommandInterpret extends JVGMCommandRoot
       }
     }
 
-    if (command.type() == EOF) {
-      return true;
+    return command.type() == EOF;
+  }
+
+  private static final class ChannelState
+  {
+    private int count;
+    private VGMYM2612ChannelSnapshot snapshot;
+
+    ChannelState()
+    {
+
     }
-    return false;
+  }
+
+  private void dumpPreset(
+    final Map<Integer, ChannelState> channel_states,
+    final VGMYM2612Interpreter interpreter)
+  {
+    LOG.debug("channels might need snapshots");
+
+    for (int index = 0; index < 6; ++index) {
+      final ChannelState channel_state = channel_states.get(Integer.valueOf(index));
+      final VGMYM2612ChannelSnapshot new_snapshot = interpreter.channel(index).snapshot();
+      if (!Objects.equals(new_snapshot, channel_state.snapshot)) {
+        channel_state.snapshot = new_snapshot;
+        ++channel_state.count;
+
+        final String name =
+          String.format(
+            "ch%02d-%04d.txt",
+            Integer.valueOf(index),
+            Integer.valueOf(channel_state.count));
+
+        final Path path = this.output_directory.resolve(name);
+        LOG.debug("created snapshot: {}", path);
+
+        try {
+          Files.createDirectories(this.output_directory);
+          try (BufferedWriter writer = Files.newBufferedWriter(path)) {
+            dumpChannel(writer, new_snapshot);
+          } catch (final IOException e) {
+            LOG.error("i/o error: {}: ", path, e);
+          }
+        } catch (final IOException e) {
+          LOG.error("i/o error: {}: ", this.output_directory, e);
+        }
+      }
+    }
+  }
+
+  private static void dumpChannel(
+    final BufferedWriter writer,
+    final VGMYM2612ChannelSnapshot channel)
+    throws IOException
+  {
+    final String separator = System.lineSeparator();
+
+    writer.append("[channel ")
+      .append(separator);
+
+    writer.append("  [index ")
+      .append(Integer.toUnsignedString(channel.index()))
+      .append("]")
+      .append(separator);
+    writer.append("  [algorithm ")
+      .append(Integer.toUnsignedString(channel.algorithm()))
+      .append("]")
+      .append(separator);
+
+    for (int op_index = 0; op_index < 4; ++op_index) {
+      final VGMYM2612OperatorSnapshot operator = channel.operator(op_index);
+      writer.append("  [op ");
+      writer.append(separator);
+
+      writer.append("    [index ");
+      writer.append(Integer.toUnsignedString(op_index));
+      writer.append("]");
+      writer.append(separator);
+
+      {
+        writer.append("    [envelope ");
+        writer.append(separator);
+
+        {
+          writer.append("      [attack-rate ");
+          writer.append(Integer.toUnsignedString(operator.envelopeRateAttack()));
+          writer.append("]");
+          writer.append(separator);
+
+          writer.append("      [decay-1-level ");
+          writer.append(Integer.toUnsignedString(operator.envelopeDecay1Level()));
+          writer.append("]");
+          writer.append(separator);
+
+          writer.append("      [decay-1-rate ");
+          writer.append(Integer.toUnsignedString(operator.envelopeDecay1Rate()));
+          writer.append("]");
+          writer.append(separator);
+
+          writer.append("      [decay-2-rate ");
+          writer.append(Integer.toUnsignedString(operator.envelopeDecay2Rate()));
+          writer.append("]");
+          writer.append(separator);
+
+          writer.append("      [release-rate ");
+          writer.append(Integer.toUnsignedString(operator.envelopeReleaseRate()));
+          writer.append("]");
+        }
+
+        writer.append("]");
+        writer.append(separator);
+      }
+
+      writer.append("    [detune ");
+      writer.append(Integer.toUnsignedString(operator.pitchDetune()));
+      writer.append("]");
+      writer.append(separator);
+
+      writer.append("    [multiply ");
+      writer.append(Integer.toUnsignedString(operator.pitchMultiply()));
+      writer.append("]");
+      writer.append(separator);
+
+      writer.append("    [volume-inverse ");
+      writer.append(Integer.toUnsignedString(operator.volumeInverse()));
+      writer.append("]");
+
+      writer.append("]");
+      writer.append(separator);
+    }
+
+    writer.append("]");
+    writer.append(separator);
+    writer.append(separator);
   }
 
   @Override
@@ -161,7 +305,23 @@ public final class JVGMCommandInterpret extends JVGMCommandRoot
 
     boolean failed = false;
 
-    final VGMYM2612Interpreter interpreter = new VGMYM2612Interpreter();
+    final MutableBoolean changed = new MutableBoolean(false);
+    final Map<Integer, ChannelState> channel_states = new HashMap<>(6);
+    for (int index = 0; index < 6; ++index) {
+      channel_states.put(Integer.valueOf(index), new ChannelState());
+    }
+
+    final VGMYM2612Interpreter interpreter =
+      new VGMYM2612Interpreter(
+        VGMYM2612Callbacks.builder()
+          .setOnInstructionReceived(
+            (inter, preset_changed) ->
+              this.maybeDumpPreset(
+                channel_states,
+                changed,
+                inter,
+                preset_changed))
+          .build());
 
     try (InputStream file = this.openStream()) {
       try (VGMParserHeaderType parser = parsers.open(this.file_input, file)) {
@@ -196,11 +356,26 @@ public final class JVGMCommandInterpret extends JVGMCommandRoot
           }
 
           if (doCommand(interpreter, body_result.get())) {
+            this.dumpPreset(channel_states, interpreter);
             return failed ? FAILURE : SUCCESS;
           }
         }
       }
     }
+  }
+
+  private void maybeDumpPreset(
+    final Map<Integer, ChannelState> previous_channels,
+    final MutableBoolean changed,
+    final VGMYM2612Interpreter inter,
+    final boolean preset_changed)
+  {
+    if (preset_changed) {
+      if (!changed.booleanValue()) {
+        this.dumpPreset(previous_channels, inter);
+      }
+    }
+    changed.setValue(preset_changed);
   }
   // CHECKSTYLE:ON
 

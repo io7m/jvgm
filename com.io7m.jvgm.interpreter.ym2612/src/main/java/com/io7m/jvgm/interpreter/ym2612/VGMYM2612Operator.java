@@ -69,12 +69,22 @@ public final class VGMYM2612Operator
   }
 
   /**
-   * @return The operator index
+   * @return A snapshot of the operator
    */
 
-  public int index()
+  public VGMYM2612OperatorSnapshot snapshot()
   {
-    return this.index;
+    return VGMYM2612OperatorSnapshot.builder()
+      .setEnvelopeDecay1Level(this.amplitude_secondary)
+      .setEnvelopeDecay1Rate(this.rate_decay_0)
+      .setEnvelopeDecay2Rate(this.rate_decay_1)
+      .setEnvelopeRateAttack(this.rate_attack)
+      .setEnvelopeReleaseRate(this.rate_release)
+      .setIndex(this.index)
+      .setPitchDetune(this.pitch_detune)
+      .setPitchMultiply(this.pitch_multiply)
+      .setVolumeInverse(this.volume)
+      .build();
   }
 
   /**

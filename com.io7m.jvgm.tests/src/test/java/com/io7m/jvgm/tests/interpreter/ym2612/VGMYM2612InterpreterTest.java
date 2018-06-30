@@ -16,6 +16,7 @@
 
 package com.io7m.jvgm.tests.interpreter.ym2612;
 
+import com.io7m.jvgm.interpreter.ym2612.VGMYM2612Callbacks;
 import com.io7m.jvgm.interpreter.ym2612.VGMYM2612Interpreter;
 import org.junit.jupiter.api.Test;
 
@@ -24,7 +25,8 @@ public final class VGMYM2612InterpreterTest
   @Test
   public void testExhaustivePort0()
   {
-    final VGMYM2612Interpreter interp = new VGMYM2612Interpreter();
+    final VGMYM2612Interpreter interp =
+      new VGMYM2612Interpreter(VGMYM2612Callbacks.builder().build());
 
     for (int register = 0; register < 0x100; ++register) {
       for (int value = 0; value < 0x100; ++value) {
@@ -36,7 +38,8 @@ public final class VGMYM2612InterpreterTest
   @Test
   public void testExhaustivePort1()
   {
-    final VGMYM2612Interpreter interp = new VGMYM2612Interpreter();
+    final VGMYM2612Interpreter interp =
+      new VGMYM2612Interpreter(VGMYM2612Callbacks.builder().build());
 
     for (int register = 0; register < 0x100; ++register) {
       for (int value = 0; value < 0x100; ++value) {

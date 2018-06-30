@@ -20,6 +20,7 @@ import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
 import java.util.HashMap;
+import java.util.Objects;
 import java.util.Optional;
 
 /**
@@ -271,6 +272,7 @@ public final class VGMYM2612Interpreter
   private static final int CHANNEL_5_STEREO_AND_LFO_SENSITIVITY = 0xb6;
 
   private final HashMap<Integer, VGMYM2612Channel> channels;
+  private final VGMYM2612Callbacks callbacks;
   private int lfo_enable;
   private int lfo_frequency;
   private int dac_enable;
@@ -284,11 +286,14 @@ public final class VGMYM2612Interpreter
   private int timer_b_time;
 
   /**
-   * Construct an interpreter.
+   * @param in_callbacks The callbacks Construct an interpreter.
    */
 
-  public VGMYM2612Interpreter()
+  public VGMYM2612Interpreter(
+    final VGMYM2612Callbacks in_callbacks)
   {
+    this.callbacks = Objects.requireNonNull(in_callbacks, "callbacks");
+
     this.channels = new HashMap<>(6);
     for (int index = 0; index < 6; ++index) {
       this.channels.put(Integer.valueOf(index), new VGMYM2612Channel(this, index));
@@ -321,409 +326,429 @@ public final class VGMYM2612Interpreter
     final int register,
     final int value)
   {
-    LOG.trace(
-      "write: port 1: 0x{} 0x{}",
-      Integer.toUnsignedString(register, 16),
-      Integer.toUnsignedString(value, 16));
+    boolean preset_changed = true;
 
-    switch (register & 0xff) {
-      case 0x90:
-      case 0x91:
-      case 0x92:
-      case 0x93:
-      case 0x94:
-      case 0x95:
-      case 0x96:
-      case 0x97:
-      case 0x98:
-      case 0x99:
-      case 0x9a:
-      case 0x9b:
-      case 0x9c:
-      case 0x9d:
-      case 0x9e: {
-        this.setProprietaryRegister(register, value);
-        break;
-      }
+    try {
+      LOG.trace(
+        "write: port 1: 0x{} 0x{}",
+        Integer.toUnsignedString(register, 16),
+        Integer.toUnsignedString(value, 16));
 
-      case CHANNEL_3_STEREO_AND_LFO_SENSITIVITY: {
-        this.channel(3).setStereoAndLFOSensitivity(value);
-        break;
-      }
-      case CHANNEL_4_STEREO_AND_LFO_SENSITIVITY: {
-        this.channel(4).setStereoAndLFOSensitivity(value);
-        break;
-      }
-      case CHANNEL_5_STEREO_AND_LFO_SENSITIVITY: {
-        this.channel(5).setStereoAndLFOSensitivity(value);
-        break;
-      }
-      case CHANNEL_3_ALGORITHM_AND_FEEDBACK: {
-        this.channel(3).setAlgorithmAndFeedback(value);
-        break;
-      }
-      case CHANNEL_4_ALGORITHM_AND_FEEDBACK: {
-        this.channel(4).setAlgorithmAndFeedback(value);
-        break;
-      }
-      case CHANNEL_5_ALGORITHM_AND_FEEDBACK: {
-        this.channel(5).setAlgorithmAndFeedback(value);
-        break;
-      }
-      case CHANNEL_3_FREQUENCY_LSB: {
-        this.channel(3).setFrequencyLSB(value);
-        break;
-      }
-      case CHANNEL_3_FREQUENCY_MSB: {
-        this.channel(3).setFrequencyMSB(value);
-        break;
-      }
-      case CHANNEL_4_FREQUENCY_LSB: {
-        this.channel(4).setFrequencyLSB(value);
-        break;
-      }
-      case CHANNEL_4_FREQUENCY_MSB: {
-        this.channel(4).setFrequencyMSB(value);
-        break;
-      }
-      case CHANNEL_5_FREQUENCY_LSB: {
-        final VGMYM2612Channel channel = this.channel(5);
-        if (this.channel_3_6_special_mode) {
-          channel.operator(0).setFrequencyLSB(value);
-        } else {
-          channel.setFrequencyLSB(value);
+      switch (register & 0xff) {
+        case 0x90:
+        case 0x91:
+        case 0x92:
+        case 0x93:
+        case 0x94:
+        case 0x95:
+        case 0x96:
+        case 0x97:
+        case 0x98:
+        case 0x99:
+        case 0x9a:
+        case 0x9b:
+        case 0x9c:
+        case 0x9d:
+        case 0x9e: {
+          // XXX: It's not clear whether this should be a "preset" change or not
+          this.setProprietaryRegister(register, value);
+          break;
         }
-        break;
-      }
-      case CHANNEL_5_FREQUENCY_MSB: {
-        final VGMYM2612Channel channel = this.channel(5);
-        if (this.channel_3_6_special_mode) {
-          channel.operator(0).setFrequencyMSB(value);
-        } else {
-          channel.setFrequencyMSB(value);
-        }
-        break;
-      }
-      case CHANNEL_5_FREQUENCY_LSB_OPERATOR_1: {
-        this.channel(5).operator(1).setFrequencyLSB(value);
-        break;
-      }
-      case CHANNEL_5_FREQUENCY_MSB_OPERATOR_1: {
-        this.channel(5).operator(1).setFrequencyMSB(value);
-        break;
-      }
-      case CHANNEL_5_FREQUENCY_LSB_OPERATOR_2: {
-        this.channel(5).operator(2).setFrequencyLSB(value);
-        break;
-      }
-      case CHANNEL_5_FREQUENCY_MSB_OPERATOR_2: {
-        this.channel(5).operator(2).setFrequencyMSB(value);
-        break;
-      }
-      case CHANNEL_5_FREQUENCY_LSB_OPERATOR_3: {
-        this.channel(5).operator(3).setFrequencyLSB(value);
-        break;
-      }
-      case CHANNEL_5_FREQUENCY_MSB_OPERATOR_3: {
-        this.channel(5).operator(3).setFrequencyMSB(value);
-        break;
-      }
-      case CHANNEL_3_OPERATOR_0_DETUNE_MULTIPLE: {
-        this.channel(3).operator(0).setDetuneAndMultiple(value);
-        break;
-      }
-      case CHANNEL_3_OPERATOR_1_DETUNE_MULTIPLE: {
-        this.channel(3).operator(1).setDetuneAndMultiple(value);
-        break;
-      }
-      case CHANNEL_3_OPERATOR_2_DETUNE_MULTIPLE: {
-        this.channel(3).operator(2).setDetuneAndMultiple(value);
-        break;
-      }
-      case CHANNEL_3_OPERATOR_3_DETUNE_MULTIPLE: {
-        this.channel(3).operator(3).setDetuneAndMultiple(value);
-        break;
-      }
-      case CHANNEL_3_OPERATOR_0_VOLUME_INVERSE: {
-        this.channel(3).operator(0).setVolumeInverse(value);
-        break;
-      }
-      case CHANNEL_3_OPERATOR_1_VOLUME_INVERSE: {
-        this.channel(3).operator(1).setVolumeInverse(value);
-        break;
-      }
-      case CHANNEL_3_OPERATOR_2_VOLUME_INVERSE: {
-        this.channel(3).operator(2).setVolumeInverse(value);
-        break;
-      }
-      case CHANNEL_3_OPERATOR_3_VOLUME_INVERSE: {
-        this.channel(3).operator(3).setVolumeInverse(value);
-        break;
-      }
-      case CHANNEL_3_OPERATOR_0_RATE_SCALING_AND_ATTACK_RATE: {
-        this.channel(3).operator(0).setRateScalingAndAttackRate(value);
-        break;
-      }
-      case CHANNEL_3_OPERATOR_1_RATE_SCALING_AND_ATTACK_RATE: {
-        this.channel(3).operator(1).setRateScalingAndAttackRate(value);
-        break;
-      }
-      case CHANNEL_3_OPERATOR_2_RATE_SCALING_AND_ATTACK_RATE: {
-        this.channel(3).operator(2).setRateScalingAndAttackRate(value);
-        break;
-      }
-      case CHANNEL_3_OPERATOR_3_RATE_SCALING_AND_ATTACK_RATE: {
-        this.channel(3).operator(3).setRateScalingAndAttackRate(value);
-        break;
-      }
-      case CHANNEL_3_OPERATOR_0_RATE_DECAY_AND_AMPLITUDE_MODULATION: {
-        this.channel(3).operator(0).setRateDecayAndAmplitudeModulation(value);
-        break;
-      }
-      case CHANNEL_3_OPERATOR_1_RATE_DECAY_AND_AMPLITUDE_MODULATION: {
-        this.channel(3).operator(1).setRateDecayAndAmplitudeModulation(value);
-        break;
-      }
-      case CHANNEL_3_OPERATOR_2_RATE_DECAY_AND_AMPLITUDE_MODULATION: {
-        this.channel(3).operator(2).setRateDecayAndAmplitudeModulation(value);
-        break;
-      }
-      case CHANNEL_3_OPERATOR_3_RATE_DECAY_AND_AMPLITUDE_MODULATION: {
-        this.channel(3).operator(3).setRateDecayAndAmplitudeModulation(value);
-        break;
-      }
-      case CHANNEL_3_OPERATOR_0_RATE_DECAY_SECONDARY: {
-        this.channel(3).operator(0).setRateDecaySecondary(value);
-        break;
-      }
-      case CHANNEL_3_OPERATOR_1_RATE_DECAY_SECONDARY: {
-        this.channel(3).operator(1).setRateDecaySecondary(value);
-        break;
-      }
-      case CHANNEL_3_OPERATOR_2_RATE_DECAY_SECONDARY: {
-        this.channel(3).operator(2).setRateDecaySecondary(value);
-        break;
-      }
-      case CHANNEL_3_OPERATOR_3_RATE_DECAY_SECONDARY: {
-        this.channel(3).operator(3).setRateDecaySecondary(value);
-        break;
-      }
-      case CHANNEL_3_OPERATOR_0_RATE_RELEASE_SECONDARY_AMPLITUDE: {
-        this.channel(3).operator(0).setRateReleaseAndSecondaryAmplitude(value);
-        break;
-      }
-      case CHANNEL_3_OPERATOR_1_RATE_RELEASE_SECONDARY_AMPLITUDE: {
-        this.channel(3).operator(1).setRateReleaseAndSecondaryAmplitude(value);
-        break;
-      }
-      case CHANNEL_3_OPERATOR_2_RATE_RELEASE_SECONDARY_AMPLITUDE: {
-        this.channel(3).operator(2).setRateReleaseAndSecondaryAmplitude(value);
-        break;
-      }
-      case CHANNEL_3_OPERATOR_3_RATE_RELEASE_SECONDARY_AMPLITUDE: {
-        this.channel(3).operator(3).setRateReleaseAndSecondaryAmplitude(value);
-        break;
-      }
-      case CHANNEL_4_OPERATOR_0_DETUNE_MULTIPLE: {
-        this.channel(4).operator(0).setDetuneAndMultiple(value);
-        break;
-      }
-      case CHANNEL_4_OPERATOR_1_DETUNE_MULTIPLE: {
-        this.channel(4).operator(1).setDetuneAndMultiple(value);
-        break;
-      }
-      case CHANNEL_4_OPERATOR_2_DETUNE_MULTIPLE: {
-        this.channel(4).operator(2).setDetuneAndMultiple(value);
-        break;
-      }
-      case CHANNEL_4_OPERATOR_3_DETUNE_MULTIPLE: {
-        this.channel(4).operator(3).setDetuneAndMultiple(value);
-        break;
-      }
-      case CHANNEL_4_OPERATOR_0_VOLUME_INVERSE: {
-        this.channel(4).operator(0).setVolumeInverse(value);
-        break;
-      }
-      case CHANNEL_4_OPERATOR_1_VOLUME_INVERSE: {
-        this.channel(4).operator(1).setVolumeInverse(value);
-        break;
-      }
-      case CHANNEL_4_OPERATOR_2_VOLUME_INVERSE: {
-        this.channel(4).operator(2).setVolumeInverse(value);
-        break;
-      }
-      case CHANNEL_4_OPERATOR_3_VOLUME_INVERSE: {
-        this.channel(4).operator(3).setVolumeInverse(value);
-        break;
-      }
-      case CHANNEL_4_OPERATOR_0_RATE_SCALING_AND_ATTACK_RATE: {
-        this.channel(4).operator(0).setRateScalingAndAttackRate(value);
-        break;
-      }
-      case CHANNEL_4_OPERATOR_1_RATE_SCALING_AND_ATTACK_RATE: {
-        this.channel(4).operator(1).setRateScalingAndAttackRate(value);
-        break;
-      }
-      case CHANNEL_4_OPERATOR_2_RATE_SCALING_AND_ATTACK_RATE: {
-        this.channel(4).operator(2).setRateScalingAndAttackRate(value);
-        break;
-      }
-      case CHANNEL_4_OPERATOR_3_RATE_SCALING_AND_ATTACK_RATE: {
-        this.channel(4).operator(3).setRateScalingAndAttackRate(value);
-        break;
-      }
-      case CHANNEL_4_OPERATOR_0_RATE_DECAY_AND_AMPLITUDE_MODULATION: {
-        this.channel(4).operator(0).setRateDecayAndAmplitudeModulation(value);
-        break;
-      }
-      case CHANNEL_4_OPERATOR_1_RATE_DECAY_AND_AMPLITUDE_MODULATION: {
-        this.channel(4).operator(1).setRateDecayAndAmplitudeModulation(value);
-        break;
-      }
-      case CHANNEL_4_OPERATOR_2_RATE_DECAY_AND_AMPLITUDE_MODULATION: {
-        this.channel(4).operator(2).setRateDecayAndAmplitudeModulation(value);
-        break;
-      }
-      case CHANNEL_4_OPERATOR_3_RATE_DECAY_AND_AMPLITUDE_MODULATION: {
-        this.channel(4).operator(3).setRateDecayAndAmplitudeModulation(value);
-        break;
-      }
-      case CHANNEL_4_OPERATOR_0_RATE_DECAY_SECONDARY: {
-        this.channel(4).operator(0).setRateDecaySecondary(value);
-        break;
-      }
-      case CHANNEL_4_OPERATOR_1_RATE_DECAY_SECONDARY: {
-        this.channel(4).operator(1).setRateDecaySecondary(value);
-        break;
-      }
-      case CHANNEL_4_OPERATOR_2_RATE_DECAY_SECONDARY: {
-        this.channel(4).operator(2).setRateDecaySecondary(value);
-        break;
-      }
-      case CHANNEL_4_OPERATOR_3_RATE_DECAY_SECONDARY: {
-        this.channel(4).operator(3).setRateDecaySecondary(value);
-        break;
-      }
-      case CHANNEL_4_OPERATOR_0_RATE_RELEASE_SECONDARY_AMPLITUDE: {
-        this.channel(4).operator(0).setRateReleaseAndSecondaryAmplitude(value);
-        break;
-      }
-      case CHANNEL_4_OPERATOR_1_RATE_RELEASE_SECONDARY_AMPLITUDE: {
-        this.channel(4).operator(1).setRateReleaseAndSecondaryAmplitude(value);
-        break;
-      }
-      case CHANNEL_4_OPERATOR_2_RATE_RELEASE_SECONDARY_AMPLITUDE: {
-        this.channel(4).operator(2).setRateReleaseAndSecondaryAmplitude(value);
-        break;
-      }
-      case CHANNEL_4_OPERATOR_3_RATE_RELEASE_SECONDARY_AMPLITUDE: {
-        this.channel(4).operator(3).setRateReleaseAndSecondaryAmplitude(value);
-        break;
-      }
-      case CHANNEL_5_OPERATOR_0_DETUNE_MULTIPLE: {
-        this.channel(5).operator(0).setDetuneAndMultiple(value);
-        break;
-      }
-      case CHANNEL_5_OPERATOR_1_DETUNE_MULTIPLE: {
-        this.channel(5).operator(1).setDetuneAndMultiple(value);
-        break;
-      }
-      case CHANNEL_5_OPERATOR_2_DETUNE_MULTIPLE: {
-        this.channel(5).operator(2).setDetuneAndMultiple(value);
-        break;
-      }
-      case CHANNEL_5_OPERATOR_3_DETUNE_MULTIPLE: {
-        this.channel(5).operator(3).setDetuneAndMultiple(value);
-        break;
-      }
-      case CHANNEL_5_OPERATOR_0_VOLUME_INVERSE: {
-        this.channel(5).operator(0).setVolumeInverse(value);
-        break;
-      }
-      case CHANNEL_5_OPERATOR_1_VOLUME_INVERSE: {
-        this.channel(5).operator(1).setVolumeInverse(value);
-        break;
-      }
-      case CHANNEL_5_OPERATOR_2_VOLUME_INVERSE: {
-        this.channel(5).operator(2).setVolumeInverse(value);
-        break;
-      }
-      case CHANNEL_5_OPERATOR_3_VOLUME_INVERSE: {
-        this.channel(5).operator(3).setVolumeInverse(value);
-        break;
-      }
-      case CHANNEL_5_OPERATOR_0_RATE_SCALING_AND_ATTACK_RATE: {
-        this.channel(5).operator(0).setRateScalingAndAttackRate(value);
-        break;
-      }
-      case CHANNEL_5_OPERATOR_1_RATE_SCALING_AND_ATTACK_RATE: {
-        this.channel(5).operator(1).setRateScalingAndAttackRate(value);
-        break;
-      }
-      case CHANNEL_5_OPERATOR_2_RATE_SCALING_AND_ATTACK_RATE: {
-        this.channel(5).operator(2).setRateScalingAndAttackRate(value);
-        break;
-      }
-      case CHANNEL_5_OPERATOR_3_RATE_SCALING_AND_ATTACK_RATE: {
-        this.channel(5).operator(3).setRateScalingAndAttackRate(value);
-        break;
-      }
-      case CHANNEL_5_OPERATOR_0_RATE_DECAY_AND_AMPLITUDE_MODULATION: {
-        this.channel(5).operator(0).setRateDecayAndAmplitudeModulation(value);
-        break;
-      }
-      case CHANNEL_5_OPERATOR_1_RATE_DECAY_AND_AMPLITUDE_MODULATION: {
-        this.channel(5).operator(1).setRateDecayAndAmplitudeModulation(value);
-        break;
-      }
-      case CHANNEL_5_OPERATOR_2_RATE_DECAY_AND_AMPLITUDE_MODULATION: {
-        this.channel(5).operator(2).setRateDecayAndAmplitudeModulation(value);
-        break;
-      }
-      case CHANNEL_5_OPERATOR_3_RATE_DECAY_AND_AMPLITUDE_MODULATION: {
-        this.channel(5).operator(3).setRateDecayAndAmplitudeModulation(value);
-        break;
-      }
-      case CHANNEL_5_OPERATOR_0_RATE_DECAY_SECONDARY: {
-        this.channel(5).operator(0).setRateDecaySecondary(value);
-        break;
-      }
-      case CHANNEL_5_OPERATOR_1_RATE_DECAY_SECONDARY: {
-        this.channel(5).operator(1).setRateDecaySecondary(value);
-        break;
-      }
-      case CHANNEL_5_OPERATOR_2_RATE_DECAY_SECONDARY: {
-        this.channel(5).operator(2).setRateDecaySecondary(value);
-        break;
-      }
-      case CHANNEL_5_OPERATOR_3_RATE_DECAY_SECONDARY: {
-        this.channel(5).operator(3).setRateDecaySecondary(value);
-        break;
-      }
-      case CHANNEL_5_OPERATOR_0_RATE_RELEASE_SECONDARY_AMPLITUDE: {
-        this.channel(5).operator(0).setRateReleaseAndSecondaryAmplitude(value);
-        break;
-      }
-      case CHANNEL_5_OPERATOR_1_RATE_RELEASE_SECONDARY_AMPLITUDE: {
-        this.channel(5).operator(1).setRateReleaseAndSecondaryAmplitude(value);
-        break;
-      }
-      case CHANNEL_5_OPERATOR_2_RATE_RELEASE_SECONDARY_AMPLITUDE: {
-        this.channel(5).operator(2).setRateReleaseAndSecondaryAmplitude(value);
-        break;
-      }
-      case CHANNEL_5_OPERATOR_3_RATE_RELEASE_SECONDARY_AMPLITUDE: {
-        this.channel(5).operator(3).setRateReleaseAndSecondaryAmplitude(value);
-        break;
-      }
 
-      default: {
-        LOG.warn(
-          "write: port 1: unrecognized or unimplemented command 0x{} 0x{}",
-          Integer.toUnsignedString(register, 16),
-          Integer.toUnsignedString(value, 16));
-        break;
+        case CHANNEL_3_STEREO_AND_LFO_SENSITIVITY: {
+          this.channel(3).setStereoAndLFOSensitivity(value);
+          break;
+        }
+        case CHANNEL_4_STEREO_AND_LFO_SENSITIVITY: {
+          this.channel(4).setStereoAndLFOSensitivity(value);
+          break;
+        }
+        case CHANNEL_5_STEREO_AND_LFO_SENSITIVITY: {
+          this.channel(5).setStereoAndLFOSensitivity(value);
+          break;
+        }
+        case CHANNEL_3_ALGORITHM_AND_FEEDBACK: {
+          this.channel(3).setAlgorithmAndFeedback(value);
+          break;
+        }
+        case CHANNEL_4_ALGORITHM_AND_FEEDBACK: {
+          this.channel(4).setAlgorithmAndFeedback(value);
+          break;
+        }
+        case CHANNEL_5_ALGORITHM_AND_FEEDBACK: {
+          this.channel(5).setAlgorithmAndFeedback(value);
+          break;
+        }
+        case CHANNEL_3_FREQUENCY_LSB: {
+          this.channel(3).setFrequencyLSB(value);
+          preset_changed = false;
+          break;
+        }
+        case CHANNEL_3_FREQUENCY_MSB: {
+          this.channel(3).setFrequencyMSB(value);
+          preset_changed = false;
+          break;
+        }
+        case CHANNEL_4_FREQUENCY_LSB: {
+          this.channel(4).setFrequencyLSB(value);
+          preset_changed = false;
+          break;
+        }
+        case CHANNEL_4_FREQUENCY_MSB: {
+          this.channel(4).setFrequencyMSB(value);
+          preset_changed = false;
+          break;
+        }
+        case CHANNEL_5_FREQUENCY_LSB: {
+          final VGMYM2612Channel channel = this.channel(5);
+          if (this.channel_3_6_special_mode) {
+            channel.operator(0).setFrequencyLSB(value);
+          } else {
+            channel.setFrequencyLSB(value);
+            preset_changed = false;
+          }
+          break;
+        }
+        case CHANNEL_5_FREQUENCY_MSB: {
+          final VGMYM2612Channel channel = this.channel(5);
+          if (this.channel_3_6_special_mode) {
+            channel.operator(0).setFrequencyMSB(value);
+          } else {
+            channel.setFrequencyMSB(value);
+            preset_changed = false;
+          }
+          break;
+        }
+        case CHANNEL_5_FREQUENCY_LSB_OPERATOR_1: {
+          this.channel(5).operator(1).setFrequencyLSB(value);
+          preset_changed = false;
+          break;
+        }
+        case CHANNEL_5_FREQUENCY_MSB_OPERATOR_1: {
+          this.channel(5).operator(1).setFrequencyMSB(value);
+          preset_changed = false;
+          break;
+        }
+        case CHANNEL_5_FREQUENCY_LSB_OPERATOR_2: {
+          this.channel(5).operator(2).setFrequencyLSB(value);
+          preset_changed = false;
+          break;
+        }
+        case CHANNEL_5_FREQUENCY_MSB_OPERATOR_2: {
+          this.channel(5).operator(2).setFrequencyMSB(value);
+          preset_changed = false;
+          break;
+        }
+        case CHANNEL_5_FREQUENCY_LSB_OPERATOR_3: {
+          this.channel(5).operator(3).setFrequencyLSB(value);
+          preset_changed = false;
+          break;
+        }
+        case CHANNEL_5_FREQUENCY_MSB_OPERATOR_3: {
+          this.channel(5).operator(3).setFrequencyMSB(value);
+          preset_changed = false;
+          break;
+        }
+        case CHANNEL_3_OPERATOR_0_DETUNE_MULTIPLE: {
+          this.channel(3).operator(0).setDetuneAndMultiple(value);
+          break;
+        }
+        case CHANNEL_3_OPERATOR_1_DETUNE_MULTIPLE: {
+          this.channel(3).operator(1).setDetuneAndMultiple(value);
+          break;
+        }
+        case CHANNEL_3_OPERATOR_2_DETUNE_MULTIPLE: {
+          this.channel(3).operator(2).setDetuneAndMultiple(value);
+          break;
+        }
+        case CHANNEL_3_OPERATOR_3_DETUNE_MULTIPLE: {
+          this.channel(3).operator(3).setDetuneAndMultiple(value);
+          break;
+        }
+        case CHANNEL_3_OPERATOR_0_VOLUME_INVERSE: {
+          this.channel(3).operator(0).setVolumeInverse(value);
+          break;
+        }
+        case CHANNEL_3_OPERATOR_1_VOLUME_INVERSE: {
+          this.channel(3).operator(1).setVolumeInverse(value);
+          break;
+        }
+        case CHANNEL_3_OPERATOR_2_VOLUME_INVERSE: {
+          this.channel(3).operator(2).setVolumeInverse(value);
+          break;
+        }
+        case CHANNEL_3_OPERATOR_3_VOLUME_INVERSE: {
+          this.channel(3).operator(3).setVolumeInverse(value);
+          break;
+        }
+        case CHANNEL_3_OPERATOR_0_RATE_SCALING_AND_ATTACK_RATE: {
+          this.channel(3).operator(0).setRateScalingAndAttackRate(value);
+          break;
+        }
+        case CHANNEL_3_OPERATOR_1_RATE_SCALING_AND_ATTACK_RATE: {
+          this.channel(3).operator(1).setRateScalingAndAttackRate(value);
+          break;
+        }
+        case CHANNEL_3_OPERATOR_2_RATE_SCALING_AND_ATTACK_RATE: {
+          this.channel(3).operator(2).setRateScalingAndAttackRate(value);
+          break;
+        }
+        case CHANNEL_3_OPERATOR_3_RATE_SCALING_AND_ATTACK_RATE: {
+          this.channel(3).operator(3).setRateScalingAndAttackRate(value);
+          break;
+        }
+        case CHANNEL_3_OPERATOR_0_RATE_DECAY_AND_AMPLITUDE_MODULATION: {
+          this.channel(3).operator(0).setRateDecayAndAmplitudeModulation(value);
+          break;
+        }
+        case CHANNEL_3_OPERATOR_1_RATE_DECAY_AND_AMPLITUDE_MODULATION: {
+          this.channel(3).operator(1).setRateDecayAndAmplitudeModulation(value);
+          break;
+        }
+        case CHANNEL_3_OPERATOR_2_RATE_DECAY_AND_AMPLITUDE_MODULATION: {
+          this.channel(3).operator(2).setRateDecayAndAmplitudeModulation(value);
+          break;
+        }
+        case CHANNEL_3_OPERATOR_3_RATE_DECAY_AND_AMPLITUDE_MODULATION: {
+          this.channel(3).operator(3).setRateDecayAndAmplitudeModulation(value);
+          break;
+        }
+        case CHANNEL_3_OPERATOR_0_RATE_DECAY_SECONDARY: {
+          this.channel(3).operator(0).setRateDecaySecondary(value);
+          break;
+        }
+        case CHANNEL_3_OPERATOR_1_RATE_DECAY_SECONDARY: {
+          this.channel(3).operator(1).setRateDecaySecondary(value);
+          break;
+        }
+        case CHANNEL_3_OPERATOR_2_RATE_DECAY_SECONDARY: {
+          this.channel(3).operator(2).setRateDecaySecondary(value);
+          break;
+        }
+        case CHANNEL_3_OPERATOR_3_RATE_DECAY_SECONDARY: {
+          this.channel(3).operator(3).setRateDecaySecondary(value);
+          break;
+        }
+        case CHANNEL_3_OPERATOR_0_RATE_RELEASE_SECONDARY_AMPLITUDE: {
+          this.channel(3).operator(0).setRateReleaseAndSecondaryAmplitude(value);
+          break;
+        }
+        case CHANNEL_3_OPERATOR_1_RATE_RELEASE_SECONDARY_AMPLITUDE: {
+          this.channel(3).operator(1).setRateReleaseAndSecondaryAmplitude(value);
+          break;
+        }
+        case CHANNEL_3_OPERATOR_2_RATE_RELEASE_SECONDARY_AMPLITUDE: {
+          this.channel(3).operator(2).setRateReleaseAndSecondaryAmplitude(value);
+          break;
+        }
+        case CHANNEL_3_OPERATOR_3_RATE_RELEASE_SECONDARY_AMPLITUDE: {
+          this.channel(3).operator(3).setRateReleaseAndSecondaryAmplitude(value);
+          break;
+        }
+        case CHANNEL_4_OPERATOR_0_DETUNE_MULTIPLE: {
+          this.channel(4).operator(0).setDetuneAndMultiple(value);
+          break;
+        }
+        case CHANNEL_4_OPERATOR_1_DETUNE_MULTIPLE: {
+          this.channel(4).operator(1).setDetuneAndMultiple(value);
+          break;
+        }
+        case CHANNEL_4_OPERATOR_2_DETUNE_MULTIPLE: {
+          this.channel(4).operator(2).setDetuneAndMultiple(value);
+          break;
+        }
+        case CHANNEL_4_OPERATOR_3_DETUNE_MULTIPLE: {
+          this.channel(4).operator(3).setDetuneAndMultiple(value);
+          break;
+        }
+        case CHANNEL_4_OPERATOR_0_VOLUME_INVERSE: {
+          this.channel(4).operator(0).setVolumeInverse(value);
+          break;
+        }
+        case CHANNEL_4_OPERATOR_1_VOLUME_INVERSE: {
+          this.channel(4).operator(1).setVolumeInverse(value);
+          break;
+        }
+        case CHANNEL_4_OPERATOR_2_VOLUME_INVERSE: {
+          this.channel(4).operator(2).setVolumeInverse(value);
+          break;
+        }
+        case CHANNEL_4_OPERATOR_3_VOLUME_INVERSE: {
+          this.channel(4).operator(3).setVolumeInverse(value);
+          break;
+        }
+        case CHANNEL_4_OPERATOR_0_RATE_SCALING_AND_ATTACK_RATE: {
+          this.channel(4).operator(0).setRateScalingAndAttackRate(value);
+          break;
+        }
+        case CHANNEL_4_OPERATOR_1_RATE_SCALING_AND_ATTACK_RATE: {
+          this.channel(4).operator(1).setRateScalingAndAttackRate(value);
+          break;
+        }
+        case CHANNEL_4_OPERATOR_2_RATE_SCALING_AND_ATTACK_RATE: {
+          this.channel(4).operator(2).setRateScalingAndAttackRate(value);
+          break;
+        }
+        case CHANNEL_4_OPERATOR_3_RATE_SCALING_AND_ATTACK_RATE: {
+          this.channel(4).operator(3).setRateScalingAndAttackRate(value);
+          break;
+        }
+        case CHANNEL_4_OPERATOR_0_RATE_DECAY_AND_AMPLITUDE_MODULATION: {
+          this.channel(4).operator(0).setRateDecayAndAmplitudeModulation(value);
+          break;
+        }
+        case CHANNEL_4_OPERATOR_1_RATE_DECAY_AND_AMPLITUDE_MODULATION: {
+          this.channel(4).operator(1).setRateDecayAndAmplitudeModulation(value);
+          break;
+        }
+        case CHANNEL_4_OPERATOR_2_RATE_DECAY_AND_AMPLITUDE_MODULATION: {
+          this.channel(4).operator(2).setRateDecayAndAmplitudeModulation(value);
+          break;
+        }
+        case CHANNEL_4_OPERATOR_3_RATE_DECAY_AND_AMPLITUDE_MODULATION: {
+          this.channel(4).operator(3).setRateDecayAndAmplitudeModulation(value);
+          break;
+        }
+        case CHANNEL_4_OPERATOR_0_RATE_DECAY_SECONDARY: {
+          this.channel(4).operator(0).setRateDecaySecondary(value);
+          break;
+        }
+        case CHANNEL_4_OPERATOR_1_RATE_DECAY_SECONDARY: {
+          this.channel(4).operator(1).setRateDecaySecondary(value);
+          break;
+        }
+        case CHANNEL_4_OPERATOR_2_RATE_DECAY_SECONDARY: {
+          this.channel(4).operator(2).setRateDecaySecondary(value);
+          break;
+        }
+        case CHANNEL_4_OPERATOR_3_RATE_DECAY_SECONDARY: {
+          this.channel(4).operator(3).setRateDecaySecondary(value);
+          break;
+        }
+        case CHANNEL_4_OPERATOR_0_RATE_RELEASE_SECONDARY_AMPLITUDE: {
+          this.channel(4).operator(0).setRateReleaseAndSecondaryAmplitude(value);
+          break;
+        }
+        case CHANNEL_4_OPERATOR_1_RATE_RELEASE_SECONDARY_AMPLITUDE: {
+          this.channel(4).operator(1).setRateReleaseAndSecondaryAmplitude(value);
+          break;
+        }
+        case CHANNEL_4_OPERATOR_2_RATE_RELEASE_SECONDARY_AMPLITUDE: {
+          this.channel(4).operator(2).setRateReleaseAndSecondaryAmplitude(value);
+          break;
+        }
+        case CHANNEL_4_OPERATOR_3_RATE_RELEASE_SECONDARY_AMPLITUDE: {
+          this.channel(4).operator(3).setRateReleaseAndSecondaryAmplitude(value);
+          break;
+        }
+        case CHANNEL_5_OPERATOR_0_DETUNE_MULTIPLE: {
+          this.channel(5).operator(0).setDetuneAndMultiple(value);
+          break;
+        }
+        case CHANNEL_5_OPERATOR_1_DETUNE_MULTIPLE: {
+          this.channel(5).operator(1).setDetuneAndMultiple(value);
+          break;
+        }
+        case CHANNEL_5_OPERATOR_2_DETUNE_MULTIPLE: {
+          this.channel(5).operator(2).setDetuneAndMultiple(value);
+          break;
+        }
+        case CHANNEL_5_OPERATOR_3_DETUNE_MULTIPLE: {
+          this.channel(5).operator(3).setDetuneAndMultiple(value);
+          break;
+        }
+        case CHANNEL_5_OPERATOR_0_VOLUME_INVERSE: {
+          this.channel(5).operator(0).setVolumeInverse(value);
+          break;
+        }
+        case CHANNEL_5_OPERATOR_1_VOLUME_INVERSE: {
+          this.channel(5).operator(1).setVolumeInverse(value);
+          break;
+        }
+        case CHANNEL_5_OPERATOR_2_VOLUME_INVERSE: {
+          this.channel(5).operator(2).setVolumeInverse(value);
+          break;
+        }
+        case CHANNEL_5_OPERATOR_3_VOLUME_INVERSE: {
+          this.channel(5).operator(3).setVolumeInverse(value);
+          break;
+        }
+        case CHANNEL_5_OPERATOR_0_RATE_SCALING_AND_ATTACK_RATE: {
+          this.channel(5).operator(0).setRateScalingAndAttackRate(value);
+          break;
+        }
+        case CHANNEL_5_OPERATOR_1_RATE_SCALING_AND_ATTACK_RATE: {
+          this.channel(5).operator(1).setRateScalingAndAttackRate(value);
+          break;
+        }
+        case CHANNEL_5_OPERATOR_2_RATE_SCALING_AND_ATTACK_RATE: {
+          this.channel(5).operator(2).setRateScalingAndAttackRate(value);
+          break;
+        }
+        case CHANNEL_5_OPERATOR_3_RATE_SCALING_AND_ATTACK_RATE: {
+          this.channel(5).operator(3).setRateScalingAndAttackRate(value);
+          break;
+        }
+        case CHANNEL_5_OPERATOR_0_RATE_DECAY_AND_AMPLITUDE_MODULATION: {
+          this.channel(5).operator(0).setRateDecayAndAmplitudeModulation(value);
+          break;
+        }
+        case CHANNEL_5_OPERATOR_1_RATE_DECAY_AND_AMPLITUDE_MODULATION: {
+          this.channel(5).operator(1).setRateDecayAndAmplitudeModulation(value);
+          break;
+        }
+        case CHANNEL_5_OPERATOR_2_RATE_DECAY_AND_AMPLITUDE_MODULATION: {
+          this.channel(5).operator(2).setRateDecayAndAmplitudeModulation(value);
+          break;
+        }
+        case CHANNEL_5_OPERATOR_3_RATE_DECAY_AND_AMPLITUDE_MODULATION: {
+          this.channel(5).operator(3).setRateDecayAndAmplitudeModulation(value);
+          break;
+        }
+        case CHANNEL_5_OPERATOR_0_RATE_DECAY_SECONDARY: {
+          this.channel(5).operator(0).setRateDecaySecondary(value);
+          break;
+        }
+        case CHANNEL_5_OPERATOR_1_RATE_DECAY_SECONDARY: {
+          this.channel(5).operator(1).setRateDecaySecondary(value);
+          break;
+        }
+        case CHANNEL_5_OPERATOR_2_RATE_DECAY_SECONDARY: {
+          this.channel(5).operator(2).setRateDecaySecondary(value);
+          break;
+        }
+        case CHANNEL_5_OPERATOR_3_RATE_DECAY_SECONDARY: {
+          this.channel(5).operator(3).setRateDecaySecondary(value);
+          break;
+        }
+        case CHANNEL_5_OPERATOR_0_RATE_RELEASE_SECONDARY_AMPLITUDE: {
+          this.channel(5).operator(0).setRateReleaseAndSecondaryAmplitude(value);
+          break;
+        }
+        case CHANNEL_5_OPERATOR_1_RATE_RELEASE_SECONDARY_AMPLITUDE: {
+          this.channel(5).operator(1).setRateReleaseAndSecondaryAmplitude(value);
+          break;
+        }
+        case CHANNEL_5_OPERATOR_2_RATE_RELEASE_SECONDARY_AMPLITUDE: {
+          this.channel(5).operator(2).setRateReleaseAndSecondaryAmplitude(value);
+          break;
+        }
+        case CHANNEL_5_OPERATOR_3_RATE_RELEASE_SECONDARY_AMPLITUDE: {
+          this.channel(5).operator(3).setRateReleaseAndSecondaryAmplitude(value);
+          break;
+        }
+
+        default: {
+          LOG.warn(
+            "write: port 1: unrecognized or unimplemented command 0x{} 0x{}",
+            Integer.toUnsignedString(register, 16),
+            Integer.toUnsignedString(value, 16));
+          preset_changed = false;
+          break;
+        }
       }
+    } finally {
+      this.callbacks.onInstructionReceived().onInstructionReceived(this, preset_changed);
     }
   }
   // CHECKSTYLE:ON
@@ -741,435 +766,455 @@ public final class VGMYM2612Interpreter
     final int register,
     final int value)
   {
-    LOG.trace(
-      "write: port 0: 0x{} 0x{}",
-      Integer.toUnsignedString(register, 16),
-      Integer.toUnsignedString(value, 16));
+    boolean preset_changed = true;
 
-    switch (register & 0xff) {
+    try {
+      LOG.trace(
+        "write: port 0: 0x{} 0x{}",
+        Integer.toUnsignedString(register, 16),
+        Integer.toUnsignedString(value, 16));
 
-      case 0x90:
-      case 0x91:
-      case 0x92:
-      case 0x93:
-      case 0x94:
-      case 0x95:
-      case 0x96:
-      case 0x97:
-      case 0x98:
-      case 0x99:
-      case 0x9a:
-      case 0x9b:
-      case 0x9c:
-      case 0x9d:
-      case 0x9e: {
-        this.setProprietaryRegister(register, value);
-        break;
-      }
-
-      case TIMER_B: {
-        this.setTimerBTime(value);
-        break;
-      }
-
-      case CHANNEL_0_STEREO_AND_LFO_SENSITIVITY: {
-        this.channel(0).setStereoAndLFOSensitivity(value);
-        break;
-      }
-      case CHANNEL_1_STEREO_AND_LFO_SENSITIVITY: {
-        this.channel(1).setStereoAndLFOSensitivity(value);
-        break;
-      }
-      case CHANNEL_2_STEREO_AND_LFO_SENSITIVITY: {
-        this.channel(2).setStereoAndLFOSensitivity(value);
-        break;
-      }
-      case CHANNEL_0_ALGORITHM_AND_FEEDBACK: {
-        this.channel(0).setAlgorithmAndFeedback(value);
-        break;
-      }
-      case CHANNEL_1_ALGORITHM_AND_FEEDBACK: {
-        this.channel(1).setAlgorithmAndFeedback(value);
-        break;
-      }
-      case CHANNEL_2_ALGORITHM_AND_FEEDBACK: {
-        this.channel(2).setAlgorithmAndFeedback(value);
-        break;
-      }
-      case CHANNEL_0_FREQUENCY_LSB: {
-        this.channel(0).setFrequencyLSB(value);
-        break;
-      }
-      case CHANNEL_0_FREQUENCY_MSB: {
-        this.channel(0).setFrequencyMSB(value);
-        break;
-      }
-      case CHANNEL_1_FREQUENCY_LSB: {
-        this.channel(1).setFrequencyLSB(value);
-        break;
-      }
-      case CHANNEL_1_FREQUENCY_MSB: {
-        this.channel(1).setFrequencyMSB(value);
-        break;
-      }
-      case CHANNEL_2_FREQUENCY_LSB: {
-        final VGMYM2612Channel channel = this.channel(2);
-        if (this.channel_3_6_special_mode) {
-          channel.operator(0).setFrequencyLSB(value);
-        } else {
-          channel.setFrequencyLSB(value);
+      switch (register & 0xff) {
+        case 0x90:
+        case 0x91:
+        case 0x92:
+        case 0x93:
+        case 0x94:
+        case 0x95:
+        case 0x96:
+        case 0x97:
+        case 0x98:
+        case 0x99:
+        case 0x9a:
+        case 0x9b:
+        case 0x9c:
+        case 0x9d:
+        case 0x9e: {
+          // XXX: It's not clear whether this should be a "preset" change or not
+          this.setProprietaryRegister(register, value);
+          break;
         }
-        break;
-      }
-      case CHANNEL_2_FREQUENCY_MSB: {
-        final VGMYM2612Channel channel = this.channel(2);
-        if (this.channel_3_6_special_mode) {
-          channel.operator(0).setFrequencyMSB(value);
-        } else {
-          channel.setFrequencyMSB(value);
-        }
-        break;
-      }
-      case CHANNEL_2_FREQUENCY_LSB_OPERATOR_1: {
-        this.channel(2).operator(1).setFrequencyLSB(value);
-        break;
-      }
-      case CHANNEL_2_FREQUENCY_MSB_OPERATOR_1: {
-        this.channel(2).operator(1).setFrequencyMSB(value);
-        break;
-      }
-      case CHANNEL_2_FREQUENCY_LSB_OPERATOR_2: {
-        this.channel(2).operator(2).setFrequencyLSB(value);
-        break;
-      }
-      case CHANNEL_2_FREQUENCY_MSB_OPERATOR_2: {
-        this.channel(2).operator(2).setFrequencyMSB(value);
-        break;
-      }
-      case CHANNEL_2_FREQUENCY_LSB_OPERATOR_3: {
-        this.channel(2).operator(3).setFrequencyLSB(value);
-        break;
-      }
-      case CHANNEL_2_FREQUENCY_MSB_OPERATOR_3: {
-        this.channel(2).operator(3).setFrequencyMSB(value);
-        break;
-      }
-      case DAC_DATA: {
-        this.setDACData(value);
-        break;
-      }
-      case DAC_ENABLE: {
-        this.setDAC(value);
-        break;
-      }
-      case KEY_ON_OFF: {
-        this.setKeyOnOff(value);
-        break;
-      }
-      case TIMERS_AND_CHANNEL_3_6_MODE: {
-        this.setTimersAndChannel3_6Mode(value);
-        break;
-      }
-      case LFO_ENABLE: {
-        this.setLFO(value);
-        break;
-      }
-      case CHANNEL_0_OPERATOR_0_DETUNE_MULTIPLE: {
-        this.channel(0).operator(0).setDetuneAndMultiple(value);
-        break;
-      }
-      case CHANNEL_0_OPERATOR_1_DETUNE_MULTIPLE: {
-        this.channel(0).operator(1).setDetuneAndMultiple(value);
-        break;
-      }
-      case CHANNEL_0_OPERATOR_2_DETUNE_MULTIPLE: {
-        this.channel(0).operator(2).setDetuneAndMultiple(value);
-        break;
-      }
-      case CHANNEL_0_OPERATOR_3_DETUNE_MULTIPLE: {
-        this.channel(0).operator(3).setDetuneAndMultiple(value);
-        break;
-      }
-      case CHANNEL_0_OPERATOR_0_VOLUME_INVERSE: {
-        this.channel(0).operator(0).setVolumeInverse(value);
-        break;
-      }
-      case CHANNEL_0_OPERATOR_1_VOLUME_INVERSE: {
-        this.channel(0).operator(1).setVolumeInverse(value);
-        break;
-      }
-      case CHANNEL_0_OPERATOR_2_VOLUME_INVERSE: {
-        this.channel(0).operator(2).setVolumeInverse(value);
-        break;
-      }
-      case CHANNEL_0_OPERATOR_3_VOLUME_INVERSE: {
-        this.channel(0).operator(3).setVolumeInverse(value);
-        break;
-      }
-      case CHANNEL_0_OPERATOR_0_RATE_SCALING_AND_ATTACK_RATE: {
-        this.channel(0).operator(0).setRateScalingAndAttackRate(value);
-        break;
-      }
-      case CHANNEL_0_OPERATOR_1_RATE_SCALING_AND_ATTACK_RATE: {
-        this.channel(0).operator(1).setRateScalingAndAttackRate(value);
-        break;
-      }
-      case CHANNEL_0_OPERATOR_2_RATE_SCALING_AND_ATTACK_RATE: {
-        this.channel(0).operator(2).setRateScalingAndAttackRate(value);
-        break;
-      }
-      case CHANNEL_0_OPERATOR_3_RATE_SCALING_AND_ATTACK_RATE: {
-        this.channel(0).operator(3).setRateScalingAndAttackRate(value);
-        break;
-      }
-      case CHANNEL_0_OPERATOR_0_RATE_DECAY_AND_AMPLITUDE_MODULATION: {
-        this.channel(0).operator(0).setRateDecayAndAmplitudeModulation(value);
-        break;
-      }
-      case CHANNEL_0_OPERATOR_1_RATE_DECAY_AND_AMPLITUDE_MODULATION: {
-        this.channel(0).operator(1).setRateDecayAndAmplitudeModulation(value);
-        break;
-      }
-      case CHANNEL_0_OPERATOR_2_RATE_DECAY_AND_AMPLITUDE_MODULATION: {
-        this.channel(0).operator(2).setRateDecayAndAmplitudeModulation(value);
-        break;
-      }
-      case CHANNEL_0_OPERATOR_3_RATE_DECAY_AND_AMPLITUDE_MODULATION: {
-        this.channel(0).operator(3).setRateDecayAndAmplitudeModulation(value);
-        break;
-      }
-      case CHANNEL_0_OPERATOR_0_RATE_DECAY_SECONDARY: {
-        this.channel(0).operator(0).setRateDecaySecondary(value);
-        break;
-      }
-      case CHANNEL_0_OPERATOR_1_RATE_DECAY_SECONDARY: {
-        this.channel(0).operator(1).setRateDecaySecondary(value);
-        break;
-      }
-      case CHANNEL_0_OPERATOR_2_RATE_DECAY_SECONDARY: {
-        this.channel(0).operator(2).setRateDecaySecondary(value);
-        break;
-      }
-      case CHANNEL_0_OPERATOR_3_RATE_DECAY_SECONDARY: {
-        this.channel(0).operator(3).setRateDecaySecondary(value);
-        break;
-      }
-      case CHANNEL_0_OPERATOR_0_RATE_RELEASE_SECONDARY_AMPLITUDE: {
-        this.channel(0).operator(0).setRateReleaseAndSecondaryAmplitude(value);
-        break;
-      }
-      case CHANNEL_0_OPERATOR_1_RATE_RELEASE_SECONDARY_AMPLITUDE: {
-        this.channel(0).operator(1).setRateReleaseAndSecondaryAmplitude(value);
-        break;
-      }
-      case CHANNEL_0_OPERATOR_2_RATE_RELEASE_SECONDARY_AMPLITUDE: {
-        this.channel(0).operator(2).setRateReleaseAndSecondaryAmplitude(value);
-        break;
-      }
-      case CHANNEL_0_OPERATOR_3_RATE_RELEASE_SECONDARY_AMPLITUDE: {
-        this.channel(0).operator(3).setRateReleaseAndSecondaryAmplitude(value);
-        break;
-      }
-      case CHANNEL_1_OPERATOR_0_DETUNE_MULTIPLE: {
-        this.channel(1).operator(0).setDetuneAndMultiple(value);
-        break;
-      }
-      case CHANNEL_1_OPERATOR_1_DETUNE_MULTIPLE: {
-        this.channel(1).operator(1).setDetuneAndMultiple(value);
-        break;
-      }
-      case CHANNEL_1_OPERATOR_2_DETUNE_MULTIPLE: {
-        this.channel(1).operator(2).setDetuneAndMultiple(value);
-        break;
-      }
-      case CHANNEL_1_OPERATOR_3_DETUNE_MULTIPLE: {
-        this.channel(1).operator(3).setDetuneAndMultiple(value);
-        break;
-      }
-      case CHANNEL_1_OPERATOR_0_VOLUME_INVERSE: {
-        this.channel(1).operator(0).setVolumeInverse(value);
-        break;
-      }
-      case CHANNEL_1_OPERATOR_1_VOLUME_INVERSE: {
-        this.channel(1).operator(1).setVolumeInverse(value);
-        break;
-      }
-      case CHANNEL_1_OPERATOR_2_VOLUME_INVERSE: {
-        this.channel(1).operator(2).setVolumeInverse(value);
-        break;
-      }
-      case CHANNEL_1_OPERATOR_3_VOLUME_INVERSE: {
-        this.channel(1).operator(3).setVolumeInverse(value);
-        break;
-      }
-      case CHANNEL_1_OPERATOR_0_RATE_SCALING_AND_ATTACK_RATE: {
-        this.channel(1).operator(0).setRateScalingAndAttackRate(value);
-        break;
-      }
-      case CHANNEL_1_OPERATOR_1_RATE_SCALING_AND_ATTACK_RATE: {
-        this.channel(1).operator(1).setRateScalingAndAttackRate(value);
-        break;
-      }
-      case CHANNEL_1_OPERATOR_2_RATE_SCALING_AND_ATTACK_RATE: {
-        this.channel(1).operator(2).setRateScalingAndAttackRate(value);
-        break;
-      }
-      case CHANNEL_1_OPERATOR_3_RATE_SCALING_AND_ATTACK_RATE: {
-        this.channel(1).operator(3).setRateScalingAndAttackRate(value);
-        break;
-      }
-      case CHANNEL_1_OPERATOR_0_RATE_DECAY_AND_AMPLITUDE_MODULATION: {
-        this.channel(1).operator(0).setRateDecayAndAmplitudeModulation(value);
-        break;
-      }
-      case CHANNEL_1_OPERATOR_1_RATE_DECAY_AND_AMPLITUDE_MODULATION: {
-        this.channel(1).operator(1).setRateDecayAndAmplitudeModulation(value);
-        break;
-      }
-      case CHANNEL_1_OPERATOR_2_RATE_DECAY_AND_AMPLITUDE_MODULATION: {
-        this.channel(1).operator(2).setRateDecayAndAmplitudeModulation(value);
-        break;
-      }
-      case CHANNEL_1_OPERATOR_3_RATE_DECAY_AND_AMPLITUDE_MODULATION: {
-        this.channel(1).operator(3).setRateDecayAndAmplitudeModulation(value);
-        break;
-      }
-      case CHANNEL_1_OPERATOR_0_RATE_DECAY_SECONDARY: {
-        this.channel(1).operator(0).setRateDecaySecondary(value);
-        break;
-      }
-      case CHANNEL_1_OPERATOR_1_RATE_DECAY_SECONDARY: {
-        this.channel(1).operator(1).setRateDecaySecondary(value);
-        break;
-      }
-      case CHANNEL_1_OPERATOR_2_RATE_DECAY_SECONDARY: {
-        this.channel(1).operator(2).setRateDecaySecondary(value);
-        break;
-      }
-      case CHANNEL_1_OPERATOR_3_RATE_DECAY_SECONDARY: {
-        this.channel(1).operator(3).setRateDecaySecondary(value);
-        break;
-      }
-      case CHANNEL_1_OPERATOR_0_RATE_RELEASE_SECONDARY_AMPLITUDE: {
-        this.channel(1).operator(0).setRateReleaseAndSecondaryAmplitude(value);
-        break;
-      }
-      case CHANNEL_1_OPERATOR_1_RATE_RELEASE_SECONDARY_AMPLITUDE: {
-        this.channel(1).operator(1).setRateReleaseAndSecondaryAmplitude(value);
-        break;
-      }
-      case CHANNEL_1_OPERATOR_2_RATE_RELEASE_SECONDARY_AMPLITUDE: {
-        this.channel(1).operator(2).setRateReleaseAndSecondaryAmplitude(value);
-        break;
-      }
-      case CHANNEL_1_OPERATOR_3_RATE_RELEASE_SECONDARY_AMPLITUDE: {
-        this.channel(1).operator(3).setRateReleaseAndSecondaryAmplitude(value);
-        break;
-      }
-      case CHANNEL_2_OPERATOR_0_DETUNE_MULTIPLE: {
-        this.channel(2).operator(0).setDetuneAndMultiple(value);
-        break;
-      }
-      case CHANNEL_2_OPERATOR_1_DETUNE_MULTIPLE: {
-        this.channel(2).operator(1).setDetuneAndMultiple(value);
-        break;
-      }
-      case CHANNEL_2_OPERATOR_2_DETUNE_MULTIPLE: {
-        this.channel(2).operator(2).setDetuneAndMultiple(value);
-        break;
-      }
-      case CHANNEL_2_OPERATOR_3_DETUNE_MULTIPLE: {
-        this.channel(2).operator(3).setDetuneAndMultiple(value);
-        break;
-      }
-      case CHANNEL_2_OPERATOR_0_VOLUME_INVERSE: {
-        this.channel(2).operator(0).setVolumeInverse(value);
-        break;
-      }
-      case CHANNEL_2_OPERATOR_1_VOLUME_INVERSE: {
-        this.channel(2).operator(1).setVolumeInverse(value);
-        break;
-      }
-      case CHANNEL_2_OPERATOR_2_VOLUME_INVERSE: {
-        this.channel(2).operator(2).setVolumeInverse(value);
-        break;
-      }
-      case CHANNEL_2_OPERATOR_3_VOLUME_INVERSE: {
-        this.channel(2).operator(3).setVolumeInverse(value);
-        break;
-      }
-      case CHANNEL_2_OPERATOR_0_RATE_SCALING_AND_ATTACK_RATE: {
-        this.channel(2).operator(0).setRateScalingAndAttackRate(value);
-        break;
-      }
-      case CHANNEL_2_OPERATOR_1_RATE_SCALING_AND_ATTACK_RATE: {
-        this.channel(2).operator(1).setRateScalingAndAttackRate(value);
-        break;
-      }
-      case CHANNEL_2_OPERATOR_2_RATE_SCALING_AND_ATTACK_RATE: {
-        this.channel(2).operator(2).setRateScalingAndAttackRate(value);
-        break;
-      }
-      case CHANNEL_2_OPERATOR_3_RATE_SCALING_AND_ATTACK_RATE: {
-        this.channel(2).operator(3).setRateScalingAndAttackRate(value);
-        break;
-      }
-      case CHANNEL_2_OPERATOR_0_RATE_DECAY_AND_AMPLITUDE_MODULATION: {
-        this.channel(2).operator(0).setRateDecayAndAmplitudeModulation(value);
-        break;
-      }
-      case CHANNEL_2_OPERATOR_1_RATE_DECAY_AND_AMPLITUDE_MODULATION: {
-        this.channel(2).operator(1).setRateDecayAndAmplitudeModulation(value);
-        break;
-      }
-      case CHANNEL_2_OPERATOR_2_RATE_DECAY_AND_AMPLITUDE_MODULATION: {
-        this.channel(2).operator(2).setRateDecayAndAmplitudeModulation(value);
-        break;
-      }
-      case CHANNEL_2_OPERATOR_3_RATE_DECAY_AND_AMPLITUDE_MODULATION: {
-        this.channel(2).operator(3).setRateDecayAndAmplitudeModulation(value);
-        break;
-      }
-      case CHANNEL_2_OPERATOR_0_RATE_DECAY_SECONDARY: {
-        this.channel(2).operator(0).setRateDecaySecondary(value);
-        break;
-      }
-      case CHANNEL_2_OPERATOR_1_RATE_DECAY_SECONDARY: {
-        this.channel(2).operator(1).setRateDecaySecondary(value);
-        break;
-      }
-      case CHANNEL_2_OPERATOR_2_RATE_DECAY_SECONDARY: {
-        this.channel(2).operator(2).setRateDecaySecondary(value);
-        break;
-      }
-      case CHANNEL_2_OPERATOR_3_RATE_DECAY_SECONDARY: {
-        this.channel(2).operator(3).setRateDecaySecondary(value);
-        break;
-      }
-      case CHANNEL_2_OPERATOR_0_RATE_RELEASE_SECONDARY_AMPLITUDE: {
-        this.channel(2).operator(0).setRateReleaseAndSecondaryAmplitude(value);
-        break;
-      }
-      case CHANNEL_2_OPERATOR_1_RATE_RELEASE_SECONDARY_AMPLITUDE: {
-        this.channel(2).operator(1).setRateReleaseAndSecondaryAmplitude(value);
-        break;
-      }
-      case CHANNEL_2_OPERATOR_2_RATE_RELEASE_SECONDARY_AMPLITUDE: {
-        this.channel(2).operator(2).setRateReleaseAndSecondaryAmplitude(value);
-        break;
-      }
-      case CHANNEL_2_OPERATOR_3_RATE_RELEASE_SECONDARY_AMPLITUDE: {
-        this.channel(2).operator(3).setRateReleaseAndSecondaryAmplitude(value);
-        break;
-      }
 
-      default: {
-        LOG.warn(
-          "write: port 0: unrecognized or unimplemented command 0x{} 0x{}",
-          Integer.toUnsignedString(register, 16),
-          Integer.toUnsignedString(value, 16));
-        break;
+        case TIMER_B: {
+          this.setTimerBTime(value);
+          break;
+        }
+
+        case CHANNEL_0_STEREO_AND_LFO_SENSITIVITY: {
+          this.channel(0).setStereoAndLFOSensitivity(value);
+          break;
+        }
+        case CHANNEL_1_STEREO_AND_LFO_SENSITIVITY: {
+          this.channel(1).setStereoAndLFOSensitivity(value);
+          break;
+        }
+        case CHANNEL_2_STEREO_AND_LFO_SENSITIVITY: {
+          this.channel(2).setStereoAndLFOSensitivity(value);
+          break;
+        }
+        case CHANNEL_0_ALGORITHM_AND_FEEDBACK: {
+          this.channel(0).setAlgorithmAndFeedback(value);
+          break;
+        }
+        case CHANNEL_1_ALGORITHM_AND_FEEDBACK: {
+          this.channel(1).setAlgorithmAndFeedback(value);
+          break;
+        }
+        case CHANNEL_2_ALGORITHM_AND_FEEDBACK: {
+          this.channel(2).setAlgorithmAndFeedback(value);
+          break;
+        }
+        case CHANNEL_0_FREQUENCY_LSB: {
+          this.channel(0).setFrequencyLSB(value);
+          preset_changed = false;
+          break;
+        }
+        case CHANNEL_0_FREQUENCY_MSB: {
+          this.channel(0).setFrequencyMSB(value);
+          preset_changed = false;
+          break;
+        }
+        case CHANNEL_1_FREQUENCY_LSB: {
+          this.channel(1).setFrequencyLSB(value);
+          preset_changed = false;
+          break;
+        }
+        case CHANNEL_1_FREQUENCY_MSB: {
+          this.channel(1).setFrequencyMSB(value);
+          preset_changed = false;
+          break;
+        }
+        case CHANNEL_2_FREQUENCY_LSB: {
+          final VGMYM2612Channel channel = this.channel(2);
+          if (this.channel_3_6_special_mode) {
+            channel.operator(0).setFrequencyLSB(value);
+          } else {
+            channel.setFrequencyLSB(value);
+            preset_changed = false;
+          }
+          break;
+        }
+        case CHANNEL_2_FREQUENCY_MSB: {
+          final VGMYM2612Channel channel = this.channel(2);
+          if (this.channel_3_6_special_mode) {
+            channel.operator(0).setFrequencyMSB(value);
+          } else {
+            channel.setFrequencyMSB(value);
+            preset_changed = false;
+          }
+          break;
+        }
+        case CHANNEL_2_FREQUENCY_LSB_OPERATOR_1: {
+          this.channel(2).operator(1).setFrequencyLSB(value);
+          preset_changed = false;
+          break;
+        }
+        case CHANNEL_2_FREQUENCY_MSB_OPERATOR_1: {
+          this.channel(2).operator(1).setFrequencyMSB(value);
+          preset_changed = false;
+          break;
+        }
+        case CHANNEL_2_FREQUENCY_LSB_OPERATOR_2: {
+          this.channel(2).operator(2).setFrequencyLSB(value);
+          preset_changed = false;
+          break;
+        }
+        case CHANNEL_2_FREQUENCY_MSB_OPERATOR_2: {
+          this.channel(2).operator(2).setFrequencyMSB(value);
+          preset_changed = false;
+          break;
+        }
+        case CHANNEL_2_FREQUENCY_LSB_OPERATOR_3: {
+          this.channel(2).operator(3).setFrequencyLSB(value);
+          preset_changed = false;
+          break;
+        }
+        case CHANNEL_2_FREQUENCY_MSB_OPERATOR_3: {
+          this.channel(2).operator(3).setFrequencyMSB(value);
+          preset_changed = false;
+          break;
+        }
+        case DAC_DATA: {
+          this.setDACData(value);
+          break;
+        }
+        case DAC_ENABLE: {
+          this.setDAC(value);
+          break;
+        }
+        case KEY_ON_OFF: {
+          this.setKeyOnOff(value);
+          preset_changed = false;
+          break;
+        }
+        case TIMERS_AND_CHANNEL_3_6_MODE: {
+          this.setTimersAndChannel3_6Mode(value);
+          break;
+        }
+        case LFO_ENABLE: {
+          this.setLFO(value);
+          break;
+        }
+        case CHANNEL_0_OPERATOR_0_DETUNE_MULTIPLE: {
+          this.channel(0).operator(0).setDetuneAndMultiple(value);
+          break;
+        }
+        case CHANNEL_0_OPERATOR_1_DETUNE_MULTIPLE: {
+          this.channel(0).operator(1).setDetuneAndMultiple(value);
+          break;
+        }
+        case CHANNEL_0_OPERATOR_2_DETUNE_MULTIPLE: {
+          this.channel(0).operator(2).setDetuneAndMultiple(value);
+          break;
+        }
+        case CHANNEL_0_OPERATOR_3_DETUNE_MULTIPLE: {
+          this.channel(0).operator(3).setDetuneAndMultiple(value);
+          break;
+        }
+        case CHANNEL_0_OPERATOR_0_VOLUME_INVERSE: {
+          this.channel(0).operator(0).setVolumeInverse(value);
+          break;
+        }
+        case CHANNEL_0_OPERATOR_1_VOLUME_INVERSE: {
+          this.channel(0).operator(1).setVolumeInverse(value);
+          break;
+        }
+        case CHANNEL_0_OPERATOR_2_VOLUME_INVERSE: {
+          this.channel(0).operator(2).setVolumeInverse(value);
+          break;
+        }
+        case CHANNEL_0_OPERATOR_3_VOLUME_INVERSE: {
+          this.channel(0).operator(3).setVolumeInverse(value);
+          break;
+        }
+        case CHANNEL_0_OPERATOR_0_RATE_SCALING_AND_ATTACK_RATE: {
+          this.channel(0).operator(0).setRateScalingAndAttackRate(value);
+          break;
+        }
+        case CHANNEL_0_OPERATOR_1_RATE_SCALING_AND_ATTACK_RATE: {
+          this.channel(0).operator(1).setRateScalingAndAttackRate(value);
+          break;
+        }
+        case CHANNEL_0_OPERATOR_2_RATE_SCALING_AND_ATTACK_RATE: {
+          this.channel(0).operator(2).setRateScalingAndAttackRate(value);
+          break;
+        }
+        case CHANNEL_0_OPERATOR_3_RATE_SCALING_AND_ATTACK_RATE: {
+          this.channel(0).operator(3).setRateScalingAndAttackRate(value);
+          break;
+        }
+        case CHANNEL_0_OPERATOR_0_RATE_DECAY_AND_AMPLITUDE_MODULATION: {
+          this.channel(0).operator(0).setRateDecayAndAmplitudeModulation(value);
+          break;
+        }
+        case CHANNEL_0_OPERATOR_1_RATE_DECAY_AND_AMPLITUDE_MODULATION: {
+          this.channel(0).operator(1).setRateDecayAndAmplitudeModulation(value);
+          break;
+        }
+        case CHANNEL_0_OPERATOR_2_RATE_DECAY_AND_AMPLITUDE_MODULATION: {
+          this.channel(0).operator(2).setRateDecayAndAmplitudeModulation(value);
+          break;
+        }
+        case CHANNEL_0_OPERATOR_3_RATE_DECAY_AND_AMPLITUDE_MODULATION: {
+          this.channel(0).operator(3).setRateDecayAndAmplitudeModulation(value);
+          break;
+        }
+        case CHANNEL_0_OPERATOR_0_RATE_DECAY_SECONDARY: {
+          this.channel(0).operator(0).setRateDecaySecondary(value);
+          break;
+        }
+        case CHANNEL_0_OPERATOR_1_RATE_DECAY_SECONDARY: {
+          this.channel(0).operator(1).setRateDecaySecondary(value);
+          break;
+        }
+        case CHANNEL_0_OPERATOR_2_RATE_DECAY_SECONDARY: {
+          this.channel(0).operator(2).setRateDecaySecondary(value);
+          break;
+        }
+        case CHANNEL_0_OPERATOR_3_RATE_DECAY_SECONDARY: {
+          this.channel(0).operator(3).setRateDecaySecondary(value);
+          break;
+        }
+        case CHANNEL_0_OPERATOR_0_RATE_RELEASE_SECONDARY_AMPLITUDE: {
+          this.channel(0).operator(0).setRateReleaseAndSecondaryAmplitude(value);
+          break;
+        }
+        case CHANNEL_0_OPERATOR_1_RATE_RELEASE_SECONDARY_AMPLITUDE: {
+          this.channel(0).operator(1).setRateReleaseAndSecondaryAmplitude(value);
+          break;
+        }
+        case CHANNEL_0_OPERATOR_2_RATE_RELEASE_SECONDARY_AMPLITUDE: {
+          this.channel(0).operator(2).setRateReleaseAndSecondaryAmplitude(value);
+          break;
+        }
+        case CHANNEL_0_OPERATOR_3_RATE_RELEASE_SECONDARY_AMPLITUDE: {
+          this.channel(0).operator(3).setRateReleaseAndSecondaryAmplitude(value);
+          break;
+        }
+        case CHANNEL_1_OPERATOR_0_DETUNE_MULTIPLE: {
+          this.channel(1).operator(0).setDetuneAndMultiple(value);
+          break;
+        }
+        case CHANNEL_1_OPERATOR_1_DETUNE_MULTIPLE: {
+          this.channel(1).operator(1).setDetuneAndMultiple(value);
+          break;
+        }
+        case CHANNEL_1_OPERATOR_2_DETUNE_MULTIPLE: {
+          this.channel(1).operator(2).setDetuneAndMultiple(value);
+          break;
+        }
+        case CHANNEL_1_OPERATOR_3_DETUNE_MULTIPLE: {
+          this.channel(1).operator(3).setDetuneAndMultiple(value);
+          break;
+        }
+        case CHANNEL_1_OPERATOR_0_VOLUME_INVERSE: {
+          this.channel(1).operator(0).setVolumeInverse(value);
+          break;
+        }
+        case CHANNEL_1_OPERATOR_1_VOLUME_INVERSE: {
+          this.channel(1).operator(1).setVolumeInverse(value);
+          break;
+        }
+        case CHANNEL_1_OPERATOR_2_VOLUME_INVERSE: {
+          this.channel(1).operator(2).setVolumeInverse(value);
+          break;
+        }
+        case CHANNEL_1_OPERATOR_3_VOLUME_INVERSE: {
+          this.channel(1).operator(3).setVolumeInverse(value);
+          break;
+        }
+        case CHANNEL_1_OPERATOR_0_RATE_SCALING_AND_ATTACK_RATE: {
+          this.channel(1).operator(0).setRateScalingAndAttackRate(value);
+          break;
+        }
+        case CHANNEL_1_OPERATOR_1_RATE_SCALING_AND_ATTACK_RATE: {
+          this.channel(1).operator(1).setRateScalingAndAttackRate(value);
+          break;
+        }
+        case CHANNEL_1_OPERATOR_2_RATE_SCALING_AND_ATTACK_RATE: {
+          this.channel(1).operator(2).setRateScalingAndAttackRate(value);
+          break;
+        }
+        case CHANNEL_1_OPERATOR_3_RATE_SCALING_AND_ATTACK_RATE: {
+          this.channel(1).operator(3).setRateScalingAndAttackRate(value);
+          break;
+        }
+        case CHANNEL_1_OPERATOR_0_RATE_DECAY_AND_AMPLITUDE_MODULATION: {
+          this.channel(1).operator(0).setRateDecayAndAmplitudeModulation(value);
+          break;
+        }
+        case CHANNEL_1_OPERATOR_1_RATE_DECAY_AND_AMPLITUDE_MODULATION: {
+          this.channel(1).operator(1).setRateDecayAndAmplitudeModulation(value);
+          break;
+        }
+        case CHANNEL_1_OPERATOR_2_RATE_DECAY_AND_AMPLITUDE_MODULATION: {
+          this.channel(1).operator(2).setRateDecayAndAmplitudeModulation(value);
+          break;
+        }
+        case CHANNEL_1_OPERATOR_3_RATE_DECAY_AND_AMPLITUDE_MODULATION: {
+          this.channel(1).operator(3).setRateDecayAndAmplitudeModulation(value);
+          break;
+        }
+        case CHANNEL_1_OPERATOR_0_RATE_DECAY_SECONDARY: {
+          this.channel(1).operator(0).setRateDecaySecondary(value);
+          break;
+        }
+        case CHANNEL_1_OPERATOR_1_RATE_DECAY_SECONDARY: {
+          this.channel(1).operator(1).setRateDecaySecondary(value);
+          break;
+        }
+        case CHANNEL_1_OPERATOR_2_RATE_DECAY_SECONDARY: {
+          this.channel(1).operator(2).setRateDecaySecondary(value);
+          break;
+        }
+        case CHANNEL_1_OPERATOR_3_RATE_DECAY_SECONDARY: {
+          this.channel(1).operator(3).setRateDecaySecondary(value);
+          break;
+        }
+        case CHANNEL_1_OPERATOR_0_RATE_RELEASE_SECONDARY_AMPLITUDE: {
+          this.channel(1).operator(0).setRateReleaseAndSecondaryAmplitude(value);
+          break;
+        }
+        case CHANNEL_1_OPERATOR_1_RATE_RELEASE_SECONDARY_AMPLITUDE: {
+          this.channel(1).operator(1).setRateReleaseAndSecondaryAmplitude(value);
+          break;
+        }
+        case CHANNEL_1_OPERATOR_2_RATE_RELEASE_SECONDARY_AMPLITUDE: {
+          this.channel(1).operator(2).setRateReleaseAndSecondaryAmplitude(value);
+          break;
+        }
+        case CHANNEL_1_OPERATOR_3_RATE_RELEASE_SECONDARY_AMPLITUDE: {
+          this.channel(1).operator(3).setRateReleaseAndSecondaryAmplitude(value);
+          break;
+        }
+        case CHANNEL_2_OPERATOR_0_DETUNE_MULTIPLE: {
+          this.channel(2).operator(0).setDetuneAndMultiple(value);
+          break;
+        }
+        case CHANNEL_2_OPERATOR_1_DETUNE_MULTIPLE: {
+          this.channel(2).operator(1).setDetuneAndMultiple(value);
+          break;
+        }
+        case CHANNEL_2_OPERATOR_2_DETUNE_MULTIPLE: {
+          this.channel(2).operator(2).setDetuneAndMultiple(value);
+          break;
+        }
+        case CHANNEL_2_OPERATOR_3_DETUNE_MULTIPLE: {
+          this.channel(2).operator(3).setDetuneAndMultiple(value);
+          break;
+        }
+        case CHANNEL_2_OPERATOR_0_VOLUME_INVERSE: {
+          this.channel(2).operator(0).setVolumeInverse(value);
+          break;
+        }
+        case CHANNEL_2_OPERATOR_1_VOLUME_INVERSE: {
+          this.channel(2).operator(1).setVolumeInverse(value);
+          break;
+        }
+        case CHANNEL_2_OPERATOR_2_VOLUME_INVERSE: {
+          this.channel(2).operator(2).setVolumeInverse(value);
+          break;
+        }
+        case CHANNEL_2_OPERATOR_3_VOLUME_INVERSE: {
+          this.channel(2).operator(3).setVolumeInverse(value);
+          break;
+        }
+        case CHANNEL_2_OPERATOR_0_RATE_SCALING_AND_ATTACK_RATE: {
+          this.channel(2).operator(0).setRateScalingAndAttackRate(value);
+          break;
+        }
+        case CHANNEL_2_OPERATOR_1_RATE_SCALING_AND_ATTACK_RATE: {
+          this.channel(2).operator(1).setRateScalingAndAttackRate(value);
+          break;
+        }
+        case CHANNEL_2_OPERATOR_2_RATE_SCALING_AND_ATTACK_RATE: {
+          this.channel(2).operator(2).setRateScalingAndAttackRate(value);
+          break;
+        }
+        case CHANNEL_2_OPERATOR_3_RATE_SCALING_AND_ATTACK_RATE: {
+          this.channel(2).operator(3).setRateScalingAndAttackRate(value);
+          break;
+        }
+        case CHANNEL_2_OPERATOR_0_RATE_DECAY_AND_AMPLITUDE_MODULATION: {
+          this.channel(2).operator(0).setRateDecayAndAmplitudeModulation(value);
+          break;
+        }
+        case CHANNEL_2_OPERATOR_1_RATE_DECAY_AND_AMPLITUDE_MODULATION: {
+          this.channel(2).operator(1).setRateDecayAndAmplitudeModulation(value);
+          break;
+        }
+        case CHANNEL_2_OPERATOR_2_RATE_DECAY_AND_AMPLITUDE_MODULATION: {
+          this.channel(2).operator(2).setRateDecayAndAmplitudeModulation(value);
+          break;
+        }
+        case CHANNEL_2_OPERATOR_3_RATE_DECAY_AND_AMPLITUDE_MODULATION: {
+          this.channel(2).operator(3).setRateDecayAndAmplitudeModulation(value);
+          break;
+        }
+        case CHANNEL_2_OPERATOR_0_RATE_DECAY_SECONDARY: {
+          this.channel(2).operator(0).setRateDecaySecondary(value);
+          break;
+        }
+        case CHANNEL_2_OPERATOR_1_RATE_DECAY_SECONDARY: {
+          this.channel(2).operator(1).setRateDecaySecondary(value);
+          break;
+        }
+        case CHANNEL_2_OPERATOR_2_RATE_DECAY_SECONDARY: {
+          this.channel(2).operator(2).setRateDecaySecondary(value);
+          break;
+        }
+        case CHANNEL_2_OPERATOR_3_RATE_DECAY_SECONDARY: {
+          this.channel(2).operator(3).setRateDecaySecondary(value);
+          break;
+        }
+        case CHANNEL_2_OPERATOR_0_RATE_RELEASE_SECONDARY_AMPLITUDE: {
+          this.channel(2).operator(0).setRateReleaseAndSecondaryAmplitude(value);
+          break;
+        }
+        case CHANNEL_2_OPERATOR_1_RATE_RELEASE_SECONDARY_AMPLITUDE: {
+          this.channel(2).operator(1).setRateReleaseAndSecondaryAmplitude(value);
+          break;
+        }
+        case CHANNEL_2_OPERATOR_2_RATE_RELEASE_SECONDARY_AMPLITUDE: {
+          this.channel(2).operator(2).setRateReleaseAndSecondaryAmplitude(value);
+          break;
+        }
+        case CHANNEL_2_OPERATOR_3_RATE_RELEASE_SECONDARY_AMPLITUDE: {
+          this.channel(2).operator(3).setRateReleaseAndSecondaryAmplitude(value);
+          break;
+        }
+
+        default: {
+          LOG.warn(
+            "write: port 0: unrecognized or unimplemented command 0x{} 0x{}",
+            Integer.toUnsignedString(register, 16),
+            Integer.toUnsignedString(value, 16));
+          preset_changed = false;
+          break;
+        }
       }
+    } finally {
+      this.callbacks.onInstructionReceived().onInstructionReceived(this, preset_changed);
     }
   }
   // CHECKSTYLE:ON

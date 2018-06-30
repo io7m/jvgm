@@ -68,6 +68,8 @@ public final class VGMYM2612Channel
         .toString());
   }
 
+
+
   /**
    * @param in_index The operator index
    *
@@ -169,5 +171,21 @@ public final class VGMYM2612Channel
         Integer.valueOf(this.lfo_amplitude_sensitivity),
         Integer.valueOf(this.lfo_frequency_sensitivity));
     }
+  }
+
+  /**
+   * @return A snapshot of the current channel state
+   */
+
+  public VGMYM2612ChannelSnapshot snapshot()
+  {
+    return VGMYM2612ChannelSnapshot.builder()
+      .setAlgorithm(this.algorithm)
+      .setIndex(this.index)
+      .putOperators(0, this.operator(0).snapshot())
+      .putOperators(1, this.operator(1).snapshot())
+      .putOperators(2, this.operator(2).snapshot())
+      .putOperators(3, this.operator(3).snapshot())
+      .build();
   }
 }

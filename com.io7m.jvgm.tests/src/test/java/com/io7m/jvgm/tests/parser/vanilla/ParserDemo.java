@@ -4,6 +4,7 @@ import com.io7m.jvgm.core.VGMCommandType;
 import com.io7m.jvgm.core.VGMCommandYM2612WritePort0;
 import com.io7m.jvgm.core.VGMCommandYM2612WritePort1;
 import com.io7m.jvgm.core.VGMHeader;
+import com.io7m.jvgm.interpreter.ym2612.VGMYM2612Callbacks;
 import com.io7m.jvgm.interpreter.ym2612.VGMYM2612Interpreter;
 import com.io7m.jvgm.parser.api.VGMParseError;
 import com.io7m.jvgm.parser.api.VGMParserBodyType;
@@ -66,7 +67,10 @@ public final class ParserDemo
         final Tuple2<VGMParserBodyType, VGMHeader> pair = r.get();
         final VGMHeader header = pair._2;
         final VGMParserBodyType body = pair._1;
-        final VGMYM2612Interpreter interp = new VGMYM2612Interpreter();
+        final VGMYM2612Interpreter interp =
+          new VGMYM2612Interpreter(
+            VGMYM2612Callbacks.builder()
+              .build());
 
         while (true) {
           final Validation<Seq<VGMParseError>, VGMCommandType> body_r = body.parse();
