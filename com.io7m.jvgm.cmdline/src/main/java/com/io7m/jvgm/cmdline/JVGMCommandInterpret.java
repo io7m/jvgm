@@ -227,6 +227,10 @@ public final class JVGMCommandInterpret extends JVGMCommandRoot
       .append(Integer.toUnsignedString(channel.algorithm()))
       .append("]")
       .append(separator);
+    writer.append("  [feedback ")
+      .append(Integer.toUnsignedString(channel.feedback()))
+      .append("]")
+      .append(separator);
 
     for (int op_index = 0; op_index < 4; ++op_index) {
       final VGMYM2612OperatorSnapshot operator = channel.operator(op_index);

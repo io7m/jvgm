@@ -68,8 +68,6 @@ public final class VGMYM2612Channel
         .toString());
   }
 
-
-
   /**
    * @param in_index The operator index
    *
@@ -181,6 +179,7 @@ public final class VGMYM2612Channel
   {
     return VGMYM2612ChannelSnapshot.builder()
       .setAlgorithm(this.algorithm)
+      .setFeedback(this.feedback)
       .setIndex(this.index)
       .putOperators(0, this.operator(0).snapshot())
       .putOperators(1, this.operator(1).snapshot())

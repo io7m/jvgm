@@ -38,6 +38,13 @@ public interface VGMYM2612ChannelSnapshotType
   int algorithm();
 
   /**
+   * @return The feedback amount
+   */
+
+  @Value.Parameter
+  int feedback();
+
+  /**
    * @return The channel operators
    */
 
