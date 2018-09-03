@@ -9,7 +9,7 @@
   <parent>
     <groupId>com.io7m.primogenitor</groupId>
     <artifactId>com.io7m.primogenitor</artifactId>
-    <version>3.0.0-beta0008</version>
+    <version>3.0.0-beta0010</version>
   </parent>
 
   <groupId>com.io7m.jvgm</groupId>
@@ -22,13 +22,14 @@
   <url>http://github.com/io7m/jvgm</url>
 
   <modules>
+    <module>com.io7m.jvgm.cmdline</module>
     <module>com.io7m.jvgm.core</module>
-    <module>com.io7m.jvgm.tests</module>
     <module>com.io7m.jvgm.documentation</module>
+    <module>com.io7m.jvgm.interpreter.ym2612.dx7</module>
+    <module>com.io7m.jvgm.interpreter.ym2612</module>
     <module>com.io7m.jvgm.parser.api</module>
     <module>com.io7m.jvgm.parser.vanilla</module>
-    <module>com.io7m.jvgm.interpreter.ym2612</module>
-    <module>com.io7m.jvgm.cmdline</module>
+    <module>com.io7m.jvgm.tests</module>
   </modules>
 
   <properties>
@@ -92,6 +93,11 @@
 
   <dependencyManagement>
     <dependencies>
+      <dependency>
+        <groupId>com.io7m.jdextrosa</groupId>
+        <artifactId>com.io7m.jdextrosa.core</artifactId>
+        <version>0.0.1</version>
+      </dependency>
       <dependency>
         <groupId>com.io7m.junreachable</groupId>
         <artifactId>com.io7m.junreachable.core</artifactId>
