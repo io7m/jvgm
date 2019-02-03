@@ -22,15 +22,14 @@
   <dependencies>
     <dependency>
       <groupId>${project.groupId}</groupId>
-      <artifactId>com.io7m.jvgm.core</artifactId>
-      <version>${project.version}</version>
-    </dependency>
-    <dependency>
-      <groupId>${project.groupId}</groupId>
       <artifactId>com.io7m.jvgm.interpreter.ym2612</artifactId>
       <version>${project.version}</version>
     </dependency>
 
+    <dependency>
+      <groupId>com.io7m.junreachable</groupId>
+      <artifactId>com.io7m.junreachable.core</artifactId>
+    </dependency>
     <dependency>
       <groupId>com.io7m.jdextrosa</groupId>
       <artifactId>com.io7m.jdextrosa.core</artifactId>

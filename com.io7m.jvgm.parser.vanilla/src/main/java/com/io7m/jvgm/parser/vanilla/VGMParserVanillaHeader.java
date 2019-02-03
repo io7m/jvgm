@@ -53,7 +53,6 @@ final class VGMParserVanillaHeader
   };
   private final static char[] HEX_ARRAY = "0123456789ABCDEF".toCharArray();
   private final Path path;
-  private final InputStream stream;
   private final SwappedDataInputStream data_stream;
   private final byte[] buffer;
   private final VGMHeader.Builder header_builder;
@@ -66,7 +65,6 @@ final class VGMParserVanillaHeader
     super(in_path, new CountingInputStream(in_stream));
 
     this.path = Objects.requireNonNull(in_path, "Path");
-    this.stream = Objects.requireNonNull(in_stream, "Stream");
     this.data_stream = new SwappedDataInputStream(this.countingStream());
     this.header_done = false;
     this.buffer = new byte[4];

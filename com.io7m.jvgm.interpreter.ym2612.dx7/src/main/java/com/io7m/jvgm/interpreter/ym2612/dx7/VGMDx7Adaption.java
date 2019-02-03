@@ -17,13 +17,11 @@
 package com.io7m.jvgm.interpreter.ym2612.dx7;
 
 import com.io7m.jdextrosa.core.Dx7AlgorithmID;
-import com.io7m.jdextrosa.core.Dx7OperatorID;
 import com.io7m.jdextrosa.core.Dx7Voice;
 import com.io7m.jdextrosa.core.Dx7VoiceNamed;
 import com.io7m.junreachable.UnimplementedCodeException;
 import com.io7m.junreachable.UnreachableCodeException;
 import com.io7m.jvgm.interpreter.ym2612.VGMYM2612ChannelSnapshot;
-import com.io7m.jvgm.interpreter.ym2612.VGMYM2612Operator;
 
 import java.util.Objects;
 import java.util.Optional;
@@ -38,6 +36,15 @@ public final class VGMDx7Adaption
   {
     throw new UnreachableCodeException();
   }
+
+  /**
+   * Adapt a snapshot to a DX7 voice.
+   *
+   * @param name     The name
+   * @param snapshot The snapshot
+   *
+   * @return A DX7 voice
+   */
 
   public static Dx7VoiceNamed adaptSnapshot(
     final String name,
