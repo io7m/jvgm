@@ -14,7 +14,7 @@
 
   <groupId>com.io7m.jvgm</groupId>
   <artifactId>com.io7m.jvgm</artifactId>
-  <version>0.0.1</version>
+  <version>0.0.2-SNAPSHOT</version>
   <packaging>pom</packaging>
 
   <name>com.io7m.jvgm</name>
@@ -32,7 +32,7 @@
   </modules>
 
   <properties>
-    <io7m.api.previousVersion>0.0.1</io7m.api.previousVersion>
+    <io7m.api.previousVersion>0.0.2-SNAPSHOT</io7m.api.previousVersion>
     <io7m.org.immutables.version>2.8.8</io7m.org.immutables.version>
   </properties>
 
