@@ -1,5 +1,5 @@
 /*
- * Copyright © 2017 <code@io7m.com> http://io7m.com
+ * Copyright © 2021 Mark Raynsford <code@io7m.com> http://io7m.com
  *
  * Permission to use, copy, modify, and/or distribute this software for any
  * purpose with or without fee is hereby granted, provided that the above
@@ -14,17 +14,43 @@
  * IN CONNECTION WITH THE USE OR PERFORMANCE OF THIS SOFTWARE.
  */
 
-package com.io7m.jvgm.documentation;
+package com.io7m.jvgm.cmdline;
 
-/**
- * Marker class for looking up files by resource.
- */
+import com.beust.jcommander.internal.Console;
 
-public final class Documentation
+public final class JVGMStringConsole implements Console
 {
-  private Documentation()
+  private final StringBuilder stringBuilder;
+
+  public JVGMStringConsole()
   {
-    throw new AssertionError("Unreachable code");
+    this.stringBuilder = new StringBuilder(128);
+  }
+
+  @Override
+  public void print(
+    final String text)
+  {
+    this.stringBuilder.append(text);
+  }
+
+  @Override
+  public void println(
+    final String text)
+  {
+    this.stringBuilder.append(text);
+    this.stringBuilder.append('\n');
+  }
+
+  @Override
+  public char[] readPassword(
+    final boolean b)
+  {
+    return new char[0];
+  }
+
+  public String text()
+  {
+    return this.stringBuilder.toString();
   }
 }
-

@@ -83,14 +83,16 @@ public final class JVGMMain implements Runnable
   @Override
   public void run()
   {
+    final var console = new JVGMStringConsole();
+
     try {
+      this.commander.setConsole(console);
       this.commander.parse(this.args);
 
       final String cmd = this.commander.getParsedCommand();
       if (cmd == null) {
-        final StringBuilder sb = new StringBuilder(128);
-        this.commander.usage(sb);
-        LOG.info("Arguments required.\n{}", sb.toString());
+        this.commander.usage();
+        LOG.info("Arguments required.\n{}", console.text());
         this.exit_code = 1;
         return;
       }
@@ -99,9 +101,8 @@ public final class JVGMMain implements Runnable
       final JVGMCommandType.Status status = command.execute();
       this.exit_code = status.exitCode();
     } catch (final ParameterException e) {
-      final StringBuilder sb = new StringBuilder(128);
-      this.commander.usage(sb);
-      LOG.error("{}\n{}", e.getMessage(), sb.toString());
+      this.commander.usage();
+      LOG.error("{}\n{}", e.getMessage(), console.text());
       this.exit_code = 1;
     } catch (final Exception e) {
       LOG.error("{}", e.getMessage(), e);
