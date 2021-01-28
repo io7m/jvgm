@@ -1,11 +1,15 @@
 jvgm
 ===
 
-[![Build Status](https://travis-ci.org/io7m/jvgm.svg)](https://travis-ci.org/io7m/jvgm)
-[![Maven Central](https://maven-badges.herokuapp.com/maven-central/com.io7m.jvgm/com.io7m.jvgm/badge.png)](https://maven-badges.herokuapp.com/maven-central/com.io7m.jvgm/com.io7m.jvgm)
+[![Maven Central](https://img.shields.io/maven-central/v/com.io7m.jvgm/com.io7m.jvgm.svg?style=flat-square)](http://search.maven.org/#search%7Cga%7C1%7Cg%3A%22com.io7m.jvgm%22)
 [![Maven Central (snapshot)](https://img.shields.io/nexus/s/https/oss.sonatype.org/com.io7m.jvgm/com.io7m.jvgm.svg?style=flat-square)](https://oss.sonatype.org/content/repositories/snapshots/com/io7m/jvgm/)
-[![Codacy Badge](https://api.codacy.com/project/badge/Grade/691242f0a5e648e18924fe7aaa0bfe7d)](https://www.codacy.com/app/github_79/jvgm?utm_source=github.com&amp;utm_medium=referral&amp;utm_content=io7m/jvgm&amp;utm_campaign=Badge_Grade)
-
-See https://io7m.github.io/jvgm/ for more information.
+[![Codecov](https://img.shields.io/codecov/c/github/io7m/jvgm.svg?style=flat-square)](https://codecov.io/gh/io7m/jvgm)
 
 ![jvgm](./src/site/resources/jvgm.jpg?raw=true)
+
+| JVM             | Platform | Status |
+|-----------------|----------|--------|
+| OpenJDK LTS     | Linux    | [![Build (OpenJDK LTS, Linux)](https://img.shields.io/github/workflow/status/io7m/jvgm/main-openjdk_lts-linux)](https://github.com/io7m/jvgm/actions?query=workflow%3Amain-openjdk_lts-linux) |
+| OpenJDK Current | Linux    | [![Build (OpenJDK Current, Linux)](https://img.shields.io/github/workflow/status/io7m/jvgm/main-openjdk_current-linux)](https://github.com/io7m/jvgm/actions?query=workflow%3Amain-openjdk_current-linux)
+| OpenJDK Current | Windows  | [![Build (OpenJDK Current, Windows)](https://img.shields.io/github/workflow/status/io7m/jvgm/main-openjdk_current-windows)](https://github.com/io7m/jvgm/actions?query=workflow%3Amain-openjdk_current-windows)
+
