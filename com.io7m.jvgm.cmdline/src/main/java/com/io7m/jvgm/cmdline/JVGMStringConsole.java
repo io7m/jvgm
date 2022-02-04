@@ -18,9 +18,17 @@ package com.io7m.jvgm.cmdline;
 
 import com.beust.jcommander.internal.Console;
 
+/**
+ * A console implementation that appends to a string builder.
+ */
+
 public final class JVGMStringConsole implements Console
 {
   private final StringBuilder stringBuilder;
+
+  /**
+   * A console implementation that appends to a string builder.
+   */
 
   public JVGMStringConsole()
   {
@@ -48,6 +56,10 @@ public final class JVGMStringConsole implements Console
   {
     return new char[0];
   }
+
+  /**
+   * @return The text written so far
+   */
 
   public String text()
   {
