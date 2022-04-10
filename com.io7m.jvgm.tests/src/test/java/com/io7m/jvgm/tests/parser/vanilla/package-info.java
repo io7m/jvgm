@@ -18,6 +18,5 @@
  * Vanilla parser tests.
  */
 
-@com.io7m.jnull.NonNullByDefault
 package com.io7m.jvgm.tests.parser.vanilla;
 

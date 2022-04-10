@@ -17,7 +17,6 @@
 package com.io7m.jvgm.parser.vanilla;
 
 import com.io7m.jaffirm.core.Invariants;
-import com.io7m.jfunctional.Unit;
 import com.io7m.jvgm.core.VGMHeader;
 import com.io7m.jvgm.core.VGMVersion;
 import com.io7m.jvgm.parser.api.VGMParseError;
@@ -174,7 +173,7 @@ final class VGMParserVanillaHeader
           version -> this.parseHeaderVersioned())));
   }
 
-  private Validation<Seq<VGMParseError>, Unit> parseHeaderEOFOffset()
+  private Validation<Seq<VGMParseError>, Void> parseHeaderEOFOffset()
   {
     Invariants.checkInvariantL(
       this.countingStream().getByteCount(),
@@ -194,7 +193,7 @@ final class VGMParserVanillaHeader
       return this.errorExceptionV(e);
     }
 
-    return Validation.valid(Unit.unit());
+    return Validation.valid(null);
   }
 
   private Validation<Seq<VGMParseError>, Tuple2<VGMParserBodyType, VGMHeader>> parseHeaderVersioned()
@@ -332,7 +331,7 @@ final class VGMParserVanillaHeader
     return Validation.valid(Integer.valueOf(header_version));
   }
 
-  private Validation<Seq<VGMParseError>, Unit> parseHeaderMagicNumber()
+  private Validation<Seq<VGMParseError>, Void> parseHeaderMagicNumber()
   {
     try {
       this.data_stream.readFully(this.buffer);
@@ -358,7 +357,7 @@ final class VGMParserVanillaHeader
           .toString());
     }
 
-    return Validation.valid(Unit.unit());
+    return Validation.valid(null);
   }
 
   @Override

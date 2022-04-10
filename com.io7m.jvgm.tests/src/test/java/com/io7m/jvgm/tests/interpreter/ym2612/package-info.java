@@ -18,6 +18,5 @@
  * YM2612 interpreter tests.
  */
 
-@com.io7m.jnull.NonNullByDefault
 package com.io7m.jvgm.tests.interpreter.ym2612;
 

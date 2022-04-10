@@ -131,6 +131,13 @@
     <Bug pattern="FCCD_FIND_CLASS_CIRCULAR_DEPENDENCY"/>
   </Match>
 
+  <!-- Seems wrong. -->
+  <Match>
+    <Class name="com.io7m.jvgm.parser.vanilla.VGMParserVanillaHeader"/>
+    <Method name="parseHeaderMagicNumber"/>
+    <Bug pattern="BL_BURYING_LOGIC"/>
+  </Match>
+
   <Match>
     <Or>
       <Bug pattern="IMC_IMMATURE_CLASS_NO_TOSTRING"/>
