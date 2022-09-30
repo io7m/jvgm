@@ -2,7 +2,7 @@ jvgm
 ===
 
 [![Maven Central](https://img.shields.io/maven-central/v/com.io7m.jvgm/com.io7m.jvgm.svg?style=flat-square)](http://search.maven.org/#search%7Cga%7C1%7Cg%3A%22com.io7m.jvgm%22)
-[![Maven Central (snapshot)](https://img.shields.io/nexus/s/https/oss.sonatype.org/com.io7m.jvgm/com.io7m.jvgm.svg?style=flat-square)](https://oss.sonatype.org/content/repositories/snapshots/com/io7m/jvgm/)
+[![Maven Central (snapshot)](https://img.shields.io/nexus/s/https/s01.oss.sonatype.org/com.io7m.jvgm/com.io7m.jvgm.svg?style=flat-square)](https://s01.oss.sonatype.org/content/repositories/snapshots/com/io7m/jvgm/)
 [![Codecov](https://img.shields.io/codecov/c/github/io7m/jvgm.svg?style=flat-square)](https://codecov.io/gh/io7m/jvgm)
 
 ![jvgm](./src/site/resources/jvgm.jpg?raw=true)
